@@ -1,0 +1,59 @@
+# Misc
+*.log
+*.lock
+*.swp
+*.pyc
+.DS_Store
+
+# IDE
+.idea/
+*.iml
+
+# VSCode
+.vscode/*
+!.vscode/settings.json
+
+# Flutter / Dart
+.dart_tool/
+.packages
+.flutter-plugins
+.flutter-plugins-dependencies
+.pub/
+.pub-cache/
+build/
+
+# Generated
+**/generated_plugin_registrant.dart
+
+# Android
+.gradle/
+**/android/local.properties
+**/android/captures/
+*.jks
+**/android/key.properties
+
+# iOS
+**/ios/Pods/
+**/ios/.symlinks/
+**/ios/DerivedData/
+**/ios/Flutter/ephemeral
+**/ios/Flutter/flutter_assets/
+**/ios/Flutter/App.framework
+**/ios/Flutter/Flutter.framework
+**/ios/Flutter/Generated.xcconfig
+**/ios/Flutter/flutter_export_environment.sh
+**/ios/**/xcuserdata
+
+# Windows
+**/windows/flutter/ephemeral/
+
+# Coverage
+coverage/
+
+# Environment
+*.env
+
+# Firebase
+google-services.json
+GoogleService-Info.plist
+firebase_options.dart
