@@ -19,6 +19,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.ydh.salvio.data.model.GitHubPrReview
 import com.ydh.salvio.data.model.GitHubPullRequest
 import com.ydh.salvio.ui.theme.*
 import com.ydh.salvio.viewmodel.DashboardViewModel
@@ -107,7 +108,11 @@ fun PullRequestScreen(
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         items(prs) { pr ->
-                            PullRequestCard(pr = pr, state = prState)
+                            PullRequestCard(
+                                pr = pr,
+                                state = prState,
+                                reviews = state.prReviews[pr.number] ?: emptyList()
+                            )
                         }
                     }
                 }
@@ -117,7 +122,11 @@ fun PullRequestScreen(
 }
 
 @Composable
-private fun PullRequestCard(pr: GitHubPullRequest, state: String) {
+private fun PullRequestCard(
+    pr: GitHubPullRequest,
+    state: String,
+    reviews: List<GitHubPrReview>
+) {
     val stateColor = when (state) {
         "open" -> GitHubGreen
         "merged" -> Color(0xFF8957E5)
@@ -128,6 +137,8 @@ private fun PullRequestCard(pr: GitHubPullRequest, state: String) {
         "merged" -> Icons.Default.Merge
         else -> Icons.Default.Close
     }
+
+    val reviewSummary = summarizeReviews(reviews)
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -167,6 +178,16 @@ private fun PullRequestCard(pr: GitHubPullRequest, state: String) {
                 }
             }
 
+            // 리뷰 상태 뱃지
+            if (reviewSummary.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    reviewSummary.forEach { (label, color) ->
+                        ReviewBadge(label = label, color = color)
+                    }
+                }
+            }
+
             Spacer(modifier = Modifier.height(10.dp))
 
             Row(
@@ -188,6 +209,23 @@ private fun PullRequestCard(pr: GitHubPullRequest, state: String) {
 }
 
 @Composable
+private fun ReviewBadge(label: String, color: Color) {
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        color = color.copy(alpha = 0.15f),
+        border = BorderStroke(1.dp, color.copy(alpha = 0.4f))
+    ) {
+        Text(
+            text = label,
+            fontSize = 11.sp,
+            color = color,
+            fontWeight = FontWeight.Medium,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+        )
+    }
+}
+
+@Composable
 private fun BranchChip(label: String) {
     Surface(
         shape = RoundedCornerShape(4.dp),
@@ -201,6 +239,24 @@ private fun BranchChip(label: String) {
             fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
         )
     }
+}
+
+private fun summarizeReviews(reviews: List<GitHubPrReview>): List<Pair<String, Color>> {
+    if (reviews.isEmpty()) return emptyList()
+
+    // 리뷰어별 최신 상태만 반영
+    val latestByReviewer = reviews
+        .filter { it.state != "COMMENTED" && it.state != "DISMISSED" }
+        .groupBy { it.user.login }
+        .mapValues { (_, v) -> v.last().state }
+
+    val approvedCount = latestByReviewer.values.count { it == "APPROVED" }
+    val changesCount = latestByReviewer.values.count { it == "CHANGES_REQUESTED" }
+
+    val result = mutableListOf<Pair<String, Color>>()
+    if (approvedCount > 0) result.add("✓ Approved $approvedCount" to Color(0xFF2EA043))
+    if (changesCount > 0) result.add("✗ Changes $changesCount" to Color(0xFFD29922))
+    return result
 }
 
 private fun formatPrDate(pr: GitHubPullRequest, state: String): String {

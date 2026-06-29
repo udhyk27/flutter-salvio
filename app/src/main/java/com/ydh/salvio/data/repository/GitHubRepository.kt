@@ -1,50 +1,116 @@
 package com.ydh.salvio.data.repository
 
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 import com.ydh.salvio.data.api.GitHubApi
+import com.ydh.salvio.data.local.*
 import com.ydh.salvio.data.model.*
 
-class GitHubRepository(private val api: GitHubApi) {
+class GitHubRepository(
+    private val api: GitHubApi,
+    private val dao: CacheDao? = null
+) {
+    private val gson = Gson()
+    private val cacheMaxAgeMs = 5 * 60 * 1000L // 5분
+
+    private fun isExpired(cachedAt: Long) =
+        System.currentTimeMillis() - cachedAt > cacheMaxAgeMs
 
     suspend fun getUser(): Result<GitHubUser> = runCatching { api.getAuthenticatedUser() }
 
     suspend fun getUserRepos(): Result<List<GitHubRepo>> = runCatching {
-        api.getUserRepos(perPage = 100)
+        val cached = dao?.getAllRepos()
+        if (!cached.isNullOrEmpty() && !isExpired(cached.first().cachedAt)) {
+            return@runCatching cached.map { gson.fromJson(it.json, GitHubRepo::class.java) }
+        }
+        val repos = api.getUserRepos(perPage = 100)
+        dao?.insertRepos(repos.map { CachedRepo(it.fullName, gson.toJson(it)) })
+        repos
     }
 
-    suspend fun getCommits(owner: String, repo: String, page: Int = 1): Result<List<GitHubCommit>> =
-        runCatching { api.getCommits(owner, repo, perPage = 30, page = page) }
+    suspend fun getCommits(owner: String, repo: String, page: Int = 1): Result<List<GitHubCommit>> = runCatching {
+        val repoFullName = "$owner/$repo"
+        if (page == 1) {
+            val cached = dao?.getCommits(repoFullName)
+            if (!cached.isNullOrEmpty() && !isExpired(cached.first().cachedAt)) {
+                val type = object : TypeToken<GitHubCommit>() {}.type
+                return@runCatching cached.map { gson.fromJson(it.json, type) }
+            }
+        }
+        val commits = api.getCommits(owner, repo, perPage = 30, page = page)
+        if (page == 1) {
+            dao?.deleteCommits(repoFullName)
+            dao?.insertCommits(commits.map { CachedCommit("$repoFullName:${it.sha}", repoFullName, gson.toJson(it)) })
+        }
+        commits
+    }
 
-    suspend fun getPullRequests(owner: String, repo: String, state: String = "open"): Result<List<GitHubPullRequest>> =
-        runCatching { api.getPullRequests(owner, repo, state = state, perPage = 50) }
+    suspend fun getPullRequests(owner: String, repo: String, state: String = "open"): Result<List<GitHubPullRequest>> = runCatching {
+        val repoFullName = "$owner/$repo"
+        val cached = dao?.getPrs(repoFullName, state)
+        if (!cached.isNullOrEmpty() && !isExpired(cached.first().cachedAt)) {
+            val type = object : TypeToken<GitHubPullRequest>() {}.type
+            return@runCatching cached.map { gson.fromJson(it.json, type) }
+        }
+        val prs = api.getPullRequests(owner, repo, state = state, perPage = 50)
+        dao?.deletePrs(repoFullName, state)
+        dao?.insertPrs(prs.map { CachedPr("$repoFullName:${it.number}:$state", repoFullName, state, gson.toJson(it)) })
+        prs
+    }
 
-    suspend fun getBranches(owner: String, repo: String): Result<List<GitHubBranch>> =
-        runCatching { api.getBranches(owner, repo) }
+    suspend fun getBranches(owner: String, repo: String): Result<List<GitHubBranch>> = runCatching {
+        val repoFullName = "$owner/$repo"
+        val cached = dao?.getBranches(repoFullName)
+        if (!cached.isNullOrEmpty() && !isExpired(cached.first().cachedAt)) {
+            val type = object : TypeToken<GitHubBranch>() {}.type
+            return@runCatching cached.map { gson.fromJson(it.json, type) }
+        }
+        val branches = api.getBranches(owner, repo)
+        dao?.deleteBranches(repoFullName)
+        dao?.insertBranches(branches.map { CachedBranch("$repoFullName:${it.name}", repoFullName, gson.toJson(it)) })
+        branches
+    }
 
     suspend fun getContributors(owner: String, repo: String): Result<List<GitHubContributor>> =
         runCatching { api.getContributors(owner, repo) }
 
-    suspend fun getRepo(owner: String, repo: String): Result<GitHubRepo> =
-        runCatching { api.getRepo(owner, repo) }
+    suspend fun getRepo(owner: String, repo: String): Result<GitHubRepo> = runCatching {
+        val repoFullName = "$owner/$repo"
+        val cached = dao?.getRepo(repoFullName)
+        if (cached != null && !isExpired(cached.cachedAt)) {
+            return@runCatching gson.fromJson(cached.json, GitHubRepo::class.java)
+        }
+        val result = api.getRepo(owner, repo)
+        dao?.insertRepo(CachedRepo(result.fullName, gson.toJson(result)))
+        result
+    }
 
     suspend fun getBranchLatestCommit(owner: String, repo: String, ref: String): Result<GitHubCommit> =
         runCatching { api.getBranchLatestCommit(owner, repo, ref) }
 
-    suspend fun getDashboardStats(owner: String, repo: String): Result<GitHubRepoStats> = runCatching {
-        val openPrs = api.getPullRequests(owner, repo, state = "open", perPage = 1)
-        val closedPrs = api.getPullRequests(owner, repo, state = "closed", perPage = 100)
-        val branches = api.getBranches(owner, repo)
-        val contributors = runCatching { api.getContributors(owner, repo) }.getOrElse { emptyList() }
-        val mergedCount = closedPrs.count { it.mergedAt != null }
-        val closedCount = closedPrs.count { it.mergedAt == null }
+    suspend fun getPrReviews(owner: String, repo: String, prNumber: Int): Result<List<GitHubPrReview>> = runCatching {
+        val repoFullName = "$owner/$repo"
+        val cached = dao?.getPrReviews(repoFullName, prNumber)
+        if (!cached.isNullOrEmpty() && !isExpired(cached.first().cachedAt)) {
+            val type = object : TypeToken<GitHubPrReview>() {}.type
+            return@runCatching cached.map { gson.fromJson(it.json, type) }
+        }
+        val reviews = api.getPrReviews(owner, repo, prNumber)
+        dao?.deletePrReviews(repoFullName, prNumber)
+        dao?.insertPrReviews(reviews.map { CachedPrReview("$repoFullName:$prNumber:${it.id}", repoFullName, prNumber, gson.toJson(it)) })
+        reviews
+    }
 
-        GitHubRepoStats(
-            repoFullName = "$owner/$repo",
-            commitCount = 0,
-            openPrCount = openPrs.size,
-            mergedPrCount = mergedCount,
-            closedPrCount = closedCount,
-            branchCount = branches.size,
-            contributorCount = contributors.size
-        )
+    suspend fun getCommitActivity(owner: String, repo: String): Result<List<CommitWeekActivity>> = runCatching {
+        val repoFullName = "$owner/$repo"
+        val cached = dao?.getCommitActivity(repoFullName)
+        // 커밋 활동은 1시간 캐싱
+        if (cached != null && System.currentTimeMillis() - cached.cachedAt < 60 * 60 * 1000L) {
+            val type = object : TypeToken<List<CommitWeekActivity>>() {}.type
+            return@runCatching gson.fromJson<List<CommitWeekActivity>>(cached.json, type)
+        }
+        val activity = api.getCommitActivity(owner, repo)
+        dao?.insertCommitActivity(CachedCommitActivity(repoFullName, gson.toJson(activity)))
+        activity
     }
 }

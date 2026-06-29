@@ -58,4 +58,17 @@ interface GitHubApi {
         @Path("repo") repo: String,
         @Path("ref") ref: String
     ): GitHubCommit
+
+    @GET("repos/{owner}/{repo}/pulls/{pull_number}/reviews")
+    suspend fun getPrReviews(
+        @Path("owner") owner: String,
+        @Path("repo") repo: String,
+        @Path("pull_number") pullNumber: Int
+    ): List<GitHubPrReview>
+
+    @GET("repos/{owner}/{repo}/stats/commit_activity")
+    suspend fun getCommitActivity(
+        @Path("owner") owner: String,
+        @Path("repo") repo: String
+    ): List<CommitWeekActivity>
 }

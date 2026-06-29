@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import com.ydh.salvio.data.model.CommitWeekActivity
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -19,6 +20,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.ydh.salvio.data.model.GitHubContributor
+import com.ydh.salvio.ui.component.CommitActivityChart
 import com.ydh.salvio.ui.theme.*
 import com.ydh.salvio.viewmodel.DashboardViewModel
 import kotlin.math.max
@@ -67,6 +69,9 @@ fun StatsScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             item {
+                CommitActivityCard(activity = state.commitActivity)
+            }
+            item {
                 ContributorRankingCard(contributors = state.contributors)
             }
             item {
@@ -77,6 +82,33 @@ fun StatsScreen(
                         .take(10)
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun CommitActivityCard(activity: List<CommitWeekActivity>) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(10.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, GitHubBorder)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.ShowChart, contentDescription = null, tint = GitHubGreen, modifier = Modifier.size(18.dp))
+                Spacer(modifier = Modifier.width(6.dp))
+                Text("커밋 활동 (최근 26주)", fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+            val totalRecent = activity.takeLast(4).sumOf { it.total }
+            CommitActivityChart(activity = activity)
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "최근 4주 총 $totalRecent commits",
+                fontSize = 12.sp,
+                color = GitHubTextSecondary
+            )
         }
     }
 }

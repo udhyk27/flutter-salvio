@@ -7,6 +7,7 @@ import com.ydh.salvio.SalvioApplication
 import com.ydh.salvio.data.api.RetrofitClient
 import com.ydh.salvio.data.model.*
 import com.ydh.salvio.data.repository.GitHubRepository
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -29,6 +30,7 @@ data class PrUiState(
     val openPrs: List<GitHubPullRequest> = emptyList(),
     val closedPrs: List<GitHubPullRequest> = emptyList(),
     val mergedPrs: List<GitHubPullRequest> = emptyList(),
+    val prReviews: Map<Int, List<GitHubPrReview>> = emptyMap(),
     val error: String? = null
 )
 
@@ -43,12 +45,14 @@ data class StatsUiState(
     val isLoading: Boolean = false,
     val contributors: List<GitHubContributor> = emptyList(),
     val commits: List<GitHubCommit> = emptyList(),
+    val commitActivity: List<CommitWeekActivity> = emptyList(),
     val error: String? = null
 )
 
 class DashboardViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val dataStore = (application as SalvioApplication).tokenDataStore
+    private val app = application as SalvioApplication
+    private val dataStore = app.tokenDataStore
 
     private val _dashboardState = MutableStateFlow(DashboardUiState())
     val dashboardState: StateFlow<DashboardUiState> = _dashboardState.asStateFlow()
@@ -64,7 +68,7 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
 
     private suspend fun getRepo(): GitHubRepository? {
         val token = dataStore.token.first() ?: return null
-        return GitHubRepository(RetrofitClient.create(token))
+        return GitHubRepository(RetrofitClient.create(token), app.database.cacheDao())
     }
 
     fun loadDashboard(owner: String, repoName: String) {
@@ -72,32 +76,32 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
             _dashboardState.value = _dashboardState.value.copy(isLoading = true, error = null)
             val repo = getRepo() ?: return@launch
 
-            val repoInfo = repo.getRepo(owner, repoName)
-            val commits = repo.getCommits(owner, repoName)
-            val openPrs = repo.getPullRequests(owner, repoName, "open")
-            val branches = repo.getBranches(owner, repoName)
-            val contributors = repo.getContributors(owner, repoName)
+            val repoInfo = async { repo.getRepo(owner, repoName) }
+            val commits = async { repo.getCommits(owner, repoName) }
+            val openPrs = async { repo.getPullRequests(owner, repoName, "open") }
+            val branches = async { repo.getBranches(owner, repoName) }
+            val contributors = async { repo.getContributors(owner, repoName) }
+            val closedPrs = async { repo.getPullRequests(owner, repoName, "closed") }
 
-            val closedPrs = repo.getPullRequests(owner, repoName, "closed").getOrElse { emptyList() }
-            val mergedCount = closedPrs.count { it.mergedAt != null }
+            val closedList = closedPrs.await().getOrElse { emptyList() }
 
             _dashboardState.value = DashboardUiState(
                 isLoading = false,
-                repo = repoInfo.getOrNull(),
+                repo = repoInfo.await().getOrNull(),
                 stats = GitHubRepoStats(
                     repoFullName = "$owner/$repoName",
-                    commitCount = commits.getOrElse { emptyList() }.size,
-                    openPrCount = openPrs.getOrElse { emptyList() }.size,
-                    mergedPrCount = mergedCount,
-                    closedPrCount = closedPrs.count { it.mergedAt == null },
-                    branchCount = branches.getOrElse { emptyList() }.size,
-                    contributorCount = contributors.getOrElse { emptyList() }.size
+                    commitCount = commits.await().getOrElse { emptyList() }.size,
+                    openPrCount = openPrs.await().getOrElse { emptyList() }.size,
+                    mergedPrCount = closedList.count { it.mergedAt != null },
+                    closedPrCount = closedList.count { it.mergedAt == null },
+                    branchCount = branches.await().getOrElse { emptyList() }.size,
+                    contributorCount = contributors.await().getOrElse { emptyList() }.size
                 ),
-                recentCommits = commits.getOrElse { emptyList() }.take(5),
-                openPrs = openPrs.getOrElse { emptyList() }.take(3),
-                branches = branches.getOrElse { emptyList() },
-                contributors = contributors.getOrElse { emptyList() },
-                error = repoInfo.exceptionOrNull()?.message
+                recentCommits = commits.await().getOrElse { emptyList() }.take(5),
+                openPrs = openPrs.await().getOrElse { emptyList() }.take(3),
+                branches = branches.await().getOrElse { emptyList() },
+                contributors = contributors.await().getOrElse { emptyList() },
+                error = repoInfo.await().exceptionOrNull()?.message
             )
         }
     }
@@ -107,17 +111,37 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
             _prState.value = PrUiState(isLoading = true)
             val repo = getRepo() ?: return@launch
 
-            val open = repo.getPullRequests(owner, repoName, "open")
-            val closed = repo.getPullRequests(owner, repoName, "closed")
+            val open = async { repo.getPullRequests(owner, repoName, "open") }
+            val closed = async { repo.getPullRequests(owner, repoName, "closed") }
 
-            val closedList = closed.getOrElse { emptyList() }
-            _prState.value = PrUiState(
+            val openList = open.await().getOrElse { emptyList() }
+            val closedList = closed.await().getOrElse { emptyList() }
+
+            _prState.value = _prState.value.copy(
                 isLoading = false,
-                openPrs = open.getOrElse { emptyList() },
+                openPrs = openList,
                 closedPrs = closedList.filter { it.mergedAt == null },
                 mergedPrs = closedList.filter { it.mergedAt != null },
-                error = open.exceptionOrNull()?.message ?: closed.exceptionOrNull()?.message
+                error = open.await().exceptionOrNull()?.message
             )
+
+            // 리뷰 상태 비동기 로드
+            loadPrReviews(owner, repoName, openList)
+        }
+    }
+
+    private fun loadPrReviews(owner: String, repoName: String, prs: List<GitHubPullRequest>) {
+        viewModelScope.launch {
+            val repo = getRepo() ?: return@launch
+            val reviewMap = mutableMapOf<Int, List<GitHubPrReview>>()
+
+            prs.take(20).forEach { pr ->
+                repo.getPrReviews(owner, repoName, pr.number).getOrNull()?.let { reviews ->
+                    reviewMap[pr.number] = reviews
+                }
+            }
+
+            _prState.value = _prState.value.copy(prReviews = reviewMap)
         }
     }
 
@@ -148,14 +172,16 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
             _statsState.value = StatsUiState(isLoading = true)
             val repo = getRepo() ?: return@launch
 
-            val contributors = repo.getContributors(owner, repoName)
-            val commits = repo.getCommits(owner, repoName, 1)
+            val contributors = async { repo.getContributors(owner, repoName) }
+            val commits = async { repo.getCommits(owner, repoName, 1) }
+            val activity = async { repo.getCommitActivity(owner, repoName) }
 
             _statsState.value = StatsUiState(
                 isLoading = false,
-                contributors = contributors.getOrElse { emptyList() },
-                commits = commits.getOrElse { emptyList() },
-                error = contributors.exceptionOrNull()?.message
+                contributors = contributors.await().getOrElse { emptyList() },
+                commits = commits.await().getOrElse { emptyList() },
+                commitActivity = activity.await().getOrElse { emptyList() },
+                error = contributors.await().exceptionOrNull()?.message
             )
         }
     }

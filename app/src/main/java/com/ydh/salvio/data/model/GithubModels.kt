@@ -92,6 +92,20 @@ data class GitHubContributor(
     val id: Long
 )
 
+data class GitHubPrReview(
+    val id: Long,
+    val user: GitHubUser,
+    val state: String,
+    @SerializedName("submitted_at") val submittedAt: String?,
+    val body: String?
+)
+
+data class CommitWeekActivity(
+    val week: Long,
+    val total: Int,
+    val days: List<Int>
+)
+
 data class GitHubRepoStats(
     val repoFullName: String,
     val commitCount: Int,
