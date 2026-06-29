@@ -1,5 +1,9 @@
 package com.ydh.salvio.ui.screen.repos
 
+import android.Manifest
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -9,10 +13,10 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.AccountCircle
+import androidx.compose.material.icons.outlined.Notifications
+import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -25,10 +29,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.ydh.salvio.data.model.GitHubRepo
-import com.ydh.salvio.ui.theme.GitHubBorder
-import com.ydh.salvio.ui.theme.GitHubGreen
-import com.ydh.salvio.ui.theme.GitHubTextSecondary
-import com.ydh.salvio.ui.theme.GitHubYellow
+import com.ydh.salvio.ui.theme.*
 import com.ydh.salvio.viewmodel.AuthState
 import com.ydh.salvio.viewmodel.AuthViewModel
 import com.ydh.salvio.viewmodel.RepoListState
@@ -44,18 +45,31 @@ fun RepoListScreen(
 ) {
     val authState by authViewModel.authState.collectAsState()
     val repoState by repoViewModel.repoListState.collectAsState()
+    val favorites by repoViewModel.favoriteRepos.collectAsState()
+    val watchedRepos by repoViewModel.watchedRepos.collectAsState()
     val user = (authState as? AuthState.Success)?.user
-    var searchQuery by remember { mutableStateOf("") }
 
-    LaunchedEffect(Unit) {
-        repoViewModel.loadRepos()
-    }
+    var searchQuery by remember { mutableStateOf("") }
+    var showFavoritesOnly by remember { mutableStateOf(false) }
+
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { /* 권한 결과 처리 불필요 */ }
+
+    LaunchedEffect(Unit) { repoViewModel.loadRepos() }
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("Repository", fontWeight = FontWeight.Bold) },
                 actions = {
+                    IconButton(onClick = { showFavoritesOnly = !showFavoritesOnly }) {
+                        Icon(
+                            if (showFavoritesOnly) Icons.Default.Star else Icons.Outlined.Star,
+                            contentDescription = "즐겨찾기만 보기",
+                            tint = if (showFavoritesOnly) GitHubYellow else GitHubTextSecondary
+                        )
+                    }
                     IconButton(onClick = { repoViewModel.loadRepos() }) {
                         Icon(Icons.Default.Refresh, contentDescription = "새로고침")
                     }
@@ -73,9 +87,7 @@ fun RepoListScreen(
                         Icon(Icons.Outlined.AccountCircle, contentDescription = "로그아웃")
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                )
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface)
             )
         },
         containerColor = MaterialTheme.colorScheme.background
@@ -85,15 +97,20 @@ fun RepoListScreen(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
                 placeholder = { Text("Repository 검색...", color = GitHubTextSecondary) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
                 shape = RoundedCornerShape(8.dp),
                 colors = OutlinedTextFieldDefaults.colors(
                     unfocusedBorderColor = GitHubBorder,
                     focusedBorderColor = MaterialTheme.colorScheme.primary
                 ),
-                singleLine = true
+                singleLine = true,
+                trailingIcon = {
+                    if (searchQuery.isNotBlank()) {
+                        IconButton(onClick = { searchQuery = "" }) {
+                            Icon(Icons.Default.Clear, contentDescription = null, tint = GitHubTextSecondary)
+                        }
+                    }
+                }
             )
 
             when (val state = repoState) {
@@ -104,25 +121,65 @@ fun RepoListScreen(
                 }
                 is RepoListState.Error -> {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(text = state.message, color = MaterialTheme.colorScheme.error)
-                            Spacer(modifier = Modifier.height(8.dp))
+                        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text(state.message, color = MaterialTheme.colorScheme.error)
                             Button(onClick = { repoViewModel.loadRepos() }) { Text("다시 시도") }
                         }
                     }
                 }
                 is RepoListState.Success -> {
-                    val filtered = state.repos.filter {
-                        searchQuery.isBlank() || it.name.contains(searchQuery, ignoreCase = true) ||
+                    val allRepos = state.repos
+                    val filtered = allRepos.filter {
+                        val matchQuery = searchQuery.isBlank() ||
+                                it.name.contains(searchQuery, ignoreCase = true) ||
                                 it.description?.contains(searchQuery, ignoreCase = true) == true
+                        val matchFav = !showFavoritesOnly || favorites.contains(it.fullName)
+                        matchQuery && matchFav
                     }
+
+                    val (favRepos, otherRepos) = filtered.partition { favorites.contains(it.fullName) }
+                    val sorted = favRepos + otherRepos
+
                     LazyColumn(
                         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        items(filtered) { repo ->
+                        if (favRepos.isNotEmpty() && !showFavoritesOnly) {
+                            item {
+                                Text(
+                                    "즐겨찾기",
+                                    fontSize = 12.sp,
+                                    color = GitHubTextSecondary,
+                                    fontWeight = FontWeight.SemiBold,
+                                    modifier = Modifier.padding(bottom = 2.dp)
+                                )
+                            }
+                        }
+                        items(sorted, key = { it.fullName }) { repo ->
+                            val isFavorite = favorites.contains(repo.fullName)
+                            val isWatched = watchedRepos.contains(repo.fullName)
+                            val showDivider = !showFavoritesOnly && repo == otherRepos.firstOrNull()
+
+                            if (showDivider) {
+                                Text(
+                                    "전체",
+                                    fontSize = 12.sp,
+                                    color = GitHubTextSecondary,
+                                    fontWeight = FontWeight.SemiBold,
+                                    modifier = Modifier.padding(top = 8.dp, bottom = 2.dp)
+                                )
+                            }
                             RepoCard(
                                 repo = repo,
+                                isFavorite = isFavorite,
+                                isWatched = isWatched,
+                                onFavoriteToggle = { repoViewModel.toggleFavorite(repo.fullName) },
+                                onWatchToggle = {
+                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                        notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                                    }
+                                    repoViewModel.toggleWatch(repo.fullName)
+                                },
                                 onClick = { onRepoSelected(repo.owner.login, repo.name) }
                             )
                         }
@@ -135,27 +192,26 @@ fun RepoListScreen(
 }
 
 @Composable
-fun RepoCard(repo: GitHubRepo, onClick: () -> Unit) {
+fun RepoCard(
+    repo: GitHubRepo,
+    isFavorite: Boolean,
+    isWatched: Boolean,
+    onFavoriteToggle: () -> Unit,
+    onWatchToggle: () -> Unit,
+    onClick: () -> Unit
+) {
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onClick() },
+        modifier = Modifier.fillMaxWidth().clickable { onClick() },
         shape = RoundedCornerShape(10.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = BorderStroke(1.dp, GitHubBorder)
+        colors = CardDefaults.cardColors(
+            containerColor = if (isFavorite) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.surface
+        ),
+        border = BorderStroke(1.dp, if (isFavorite) GitHubYellow.copy(alpha = 0.5f) else GitHubBorder)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth()
-            ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
                 if (repo.private) {
-                    Icon(
-                        Icons.Default.Lock,
-                        contentDescription = null,
-                        tint = GitHubTextSecondary,
-                        modifier = Modifier.size(14.dp)
-                    )
+                    Icon(Icons.Default.Lock, contentDescription = null, tint = GitHubTextSecondary, modifier = Modifier.size(14.dp))
                     Spacer(modifier = Modifier.width(4.dp))
                 }
                 Text(
@@ -167,57 +223,52 @@ fun RepoCard(repo: GitHubRepo, onClick: () -> Unit) {
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-                Row(verticalAlignment = Alignment.CenterVertically) {
+
+                // 알림 감시 아이콘
+                IconButton(onClick = onWatchToggle, modifier = Modifier.size(28.dp)) {
                     Icon(
-                        Icons.Default.Star,
-                        contentDescription = null,
-                        tint = GitHubYellow,
-                        modifier = Modifier.size(14.dp)
+                        imageVector = if (isWatched) Icons.Default.Notifications else Icons.Outlined.Notifications,
+                        contentDescription = if (isWatched) "알림 끄기" else "PR 알림 켜기",
+                        tint = if (isWatched) GitHubBlue else GitHubTextSecondary,
+                        modifier = Modifier.size(18.dp)
                     )
+                }
+
+                // 즐겨찾기 아이콘
+                IconButton(onClick = onFavoriteToggle, modifier = Modifier.size(28.dp)) {
+                    Icon(
+                        imageVector = if (isFavorite) Icons.Default.Star else Icons.Outlined.Star,
+                        contentDescription = if (isFavorite) "즐겨찾기 해제" else "즐겨찾기",
+                        tint = if (isFavorite) GitHubYellow else GitHubTextSecondary,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(4.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Star, contentDescription = null, tint = GitHubYellow, modifier = Modifier.size(14.dp))
                     Spacer(modifier = Modifier.width(2.dp))
-                    Text(text = repo.stars.toString(), fontSize = 12.sp, color = GitHubTextSecondary)
+                    Text(repo.stars.toString(), fontSize = 12.sp, color = GitHubTextSecondary)
                 }
             }
 
             if (!repo.description.isNullOrBlank()) {
                 Spacer(modifier = Modifier.height(6.dp))
-                Text(
-                    text = repo.description,
-                    fontSize = 13.sp,
-                    color = GitHubTextSecondary,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
+                Text(repo.description, fontSize = 13.sp, color = GitHubTextSecondary, maxLines = 2, overflow = TextOverflow.Ellipsis)
             }
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+            Row(horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically) {
                 repo.language?.let { lang ->
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            modifier = Modifier
-                                .size(10.dp)
-                                .clip(CircleShape)
-                                .background(languageColor(lang))
-                        )
+                        Box(modifier = Modifier.size(10.dp).clip(CircleShape).background(languageColor(lang)))
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text(text = lang, fontSize = 12.sp, color = GitHubTextSecondary)
+                        Text(lang, fontSize = 12.sp, color = GitHubTextSecondary)
                     }
                 }
-                Text(
-                    text = "${repo.openIssues} issues",
-                    fontSize = 12.sp,
-                    color = GitHubTextSecondary
-                )
-                Text(
-                    text = repo.defaultBranch,
-                    fontSize = 12.sp,
-                    color = GitHubGreen
-                )
+                Text("${repo.openIssues} issues", fontSize = 12.sp, color = GitHubTextSecondary)
+                Text(repo.defaultBranch, fontSize = 12.sp, color = GitHubGreen)
             }
         }
     }

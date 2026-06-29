@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.ydh.salvio.SalvioApplication
 import com.ydh.salvio.data.api.RetrofitClient
 import com.ydh.salvio.data.model.*
+import kotlinx.coroutines.flow.update
 import com.ydh.salvio.data.repository.GitHubRepository
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -49,6 +50,12 @@ data class StatsUiState(
     val error: String? = null
 )
 
+data class CommitDetailUiState(
+    val isLoading: Boolean = false,
+    val detail: GitHubCommitDetail? = null,
+    val error: String? = null
+)
+
 class DashboardViewModel(application: Application) : AndroidViewModel(application) {
 
     private val app = application as SalvioApplication
@@ -65,6 +72,9 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
 
     private val _statsState = MutableStateFlow(StatsUiState())
     val statsState: StateFlow<StatsUiState> = _statsState.asStateFlow()
+
+    private val _commitDetailState = MutableStateFlow(CommitDetailUiState())
+    val commitDetailState: StateFlow<CommitDetailUiState> = _commitDetailState.asStateFlow()
 
     private suspend fun getRepo(): GitHubRepository? {
         val token = dataStore.token.first() ?: return null
@@ -163,6 +173,17 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
                 isLoading = false,
                 branches = branches,
                 branchCommits = commitMap
+            )
+        }
+    }
+
+    fun loadCommitDetail(owner: String, repoName: String, sha: String) {
+        viewModelScope.launch {
+            _commitDetailState.value = CommitDetailUiState(isLoading = true)
+            val repo = getRepo() ?: return@launch
+            repo.getCommitDetail(owner, repoName, sha).fold(
+                onSuccess = { _commitDetailState.value = CommitDetailUiState(detail = it) },
+                onFailure = { _commitDetailState.value = CommitDetailUiState(error = it.message) }
             )
         }
     }

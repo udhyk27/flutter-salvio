@@ -92,6 +92,30 @@ data class GitHubContributor(
     val id: Long
 )
 
+data class GitHubCommitDetail(
+    val sha: String,
+    val commit: CommitDetail,
+    val author: GitHubUser?,
+    @SerializedName("html_url") val htmlUrl: String,
+    val files: List<CommitFile>,
+    val stats: CommitStats?
+)
+
+data class CommitFile(
+    val filename: String,
+    val status: String,
+    val additions: Int,
+    val deletions: Int,
+    val changes: Int,
+    val patch: String?
+)
+
+data class CommitStats(
+    val total: Int,
+    val additions: Int,
+    val deletions: Int
+)
+
 data class GitHubPrReview(
     val id: Long,
     val user: GitHubUser,

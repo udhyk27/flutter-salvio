@@ -7,10 +7,8 @@ import com.ydh.salvio.SalvioApplication
 import com.ydh.salvio.data.api.RetrofitClient
 import com.ydh.salvio.data.model.GitHubRepo
 import com.ydh.salvio.data.repository.GitHubRepository
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
+import com.ydh.salvio.data.worker.PrCheckWorker
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
 sealed class RepoListState {
@@ -22,7 +20,8 @@ sealed class RepoListState {
 
 class RepoViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val dataStore = (application as SalvioApplication).tokenDataStore
+    private val app = application as SalvioApplication
+    private val dataStore = app.tokenDataStore
 
     private val _repoListState = MutableStateFlow<RepoListState>(RepoListState.Idle)
     val repoListState: StateFlow<RepoListState> = _repoListState.asStateFlow()
@@ -30,24 +29,48 @@ class RepoViewModel(application: Application) : AndroidViewModel(application) {
     private val _selectedRepo = MutableStateFlow<GitHubRepo?>(null)
     val selectedRepo: StateFlow<GitHubRepo?> = _selectedRepo.asStateFlow()
 
+    val favoriteRepos: StateFlow<Set<String>> = dataStore.favoriteRepos
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptySet())
+
+    val watchedRepos: StateFlow<List<String>> = dataStore.watchedRepos
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
     fun loadRepos() {
         viewModelScope.launch {
             _repoListState.value = RepoListState.Loading
             val token = dataStore.token.first() ?: return@launch
             val api = RetrofitClient.create(token)
-            val repo = GitHubRepository(api)
+            val repo = GitHubRepository(api, app.database.cacheDao())
             repo.getUserRepos().fold(
-                onSuccess = { repos ->
-                    _repoListState.value = RepoListState.Success(repos)
-                },
-                onFailure = { e ->
-                    _repoListState.value = RepoListState.Error(e.message ?: "조회 실패")
-                }
+                onSuccess = { repos -> _repoListState.value = RepoListState.Success(repos) },
+                onFailure = { e -> _repoListState.value = RepoListState.Error(e.message ?: "조회 실패") }
             )
         }
     }
 
     fun selectRepo(repo: GitHubRepo) {
         _selectedRepo.value = repo
+    }
+
+    fun toggleFavorite(repoFullName: String) {
+        viewModelScope.launch { dataStore.toggleFavorite(repoFullName) }
+    }
+
+    fun toggleWatch(repoFullName: String) {
+        viewModelScope.launch {
+            val current = dataStore.watchedRepos.first().toMutableList()
+            if (current.contains(repoFullName)) {
+                current.remove(repoFullName)
+            } else {
+                current.add(repoFullName)
+            }
+            dataStore.setWatchedRepos(current)
+
+            if (current.isNotEmpty()) {
+                PrCheckWorker.schedule(app)
+            } else {
+                PrCheckWorker.cancel(app)
+            }
+        }
     }
 }

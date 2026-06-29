@@ -38,6 +38,7 @@ fun DashboardScreen(
     onNavigateToPRs: () -> Unit,
     onNavigateToBranches: () -> Unit,
     onNavigateToStats: () -> Unit,
+    onNavigateToCommit: (sha: String) -> Unit,
     onBack: () -> Unit
 ) {
     val state by dashboardViewModel.dashboardState.collectAsState()
@@ -85,7 +86,7 @@ fun DashboardScreen(
         ) {
             item { StatsRow(state, onNavigateToPRs, onNavigateToBranches) }
             item { QuickActionsRow(onNavigateToPRs, onNavigateToBranches, onNavigateToStats) }
-            item { RecentCommitsSection(state.recentCommits) }
+            item { RecentCommitsSection(state.recentCommits, onNavigateToCommit) }
             item { OpenPRsSection(state, onNavigateToPRs) }
             item { ContributorsSection(state) }
         }
@@ -214,13 +215,13 @@ private fun ActionButton(
 }
 
 @Composable
-private fun RecentCommitsSection(commits: List<GitHubCommit>) {
+private fun RecentCommitsSection(commits: List<GitHubCommit>, onCommitClick: (sha: String) -> Unit) {
     SectionCard(title = "최근 커밋", icon = Icons.Default.Commit) {
         if (commits.isEmpty()) {
             Text("커밋이 없습니다.", color = GitHubTextSecondary, fontSize = 13.sp)
         } else {
             commits.forEach { commit ->
-                CommitItem(commit)
+                CommitItem(commit, onClick = { onCommitClick(commit.sha) })
                 if (commit != commits.last()) HorizontalDivider(color = GitHubBorder, thickness = 0.5.dp)
             }
         }
@@ -228,9 +229,11 @@ private fun RecentCommitsSection(commits: List<GitHubCommit>) {
 }
 
 @Composable
-private fun CommitItem(commit: GitHubCommit) {
+private fun CommitItem(commit: GitHubCommit, onClick: () -> Unit) {
     Row(
-        modifier = Modifier.padding(vertical = 8.dp),
+        modifier = Modifier
+            .clickable { onClick() }
+            .padding(vertical = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         AsyncImage(

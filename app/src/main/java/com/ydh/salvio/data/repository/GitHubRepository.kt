@@ -88,6 +88,9 @@ class GitHubRepository(
     suspend fun getBranchLatestCommit(owner: String, repo: String, ref: String): Result<GitHubCommit> =
         runCatching { api.getBranchLatestCommit(owner, repo, ref) }
 
+    suspend fun getCommitDetail(owner: String, repo: String, sha: String): Result<GitHubCommitDetail> =
+        runCatching { api.getCommitDetail(owner, repo, sha) }
+
     suspend fun getPrReviews(owner: String, repo: String, prNumber: Int): Result<List<GitHubPrReview>> = runCatching {
         val repoFullName = "$owner/$repo"
         val cached = dao?.getPrReviews(repoFullName, prNumber)

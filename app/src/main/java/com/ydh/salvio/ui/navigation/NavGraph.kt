@@ -10,6 +10,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.ydh.salvio.ui.screen.branch.BranchScreen
+import com.ydh.salvio.ui.screen.commit.CommitDetailScreen
 import com.ydh.salvio.ui.screen.dashboard.DashboardScreen
 import com.ydh.salvio.ui.screen.login.LoginScreen
 import com.ydh.salvio.ui.screen.pullrequest.PullRequestScreen
@@ -27,11 +28,13 @@ object Routes {
     const val PULL_REQUESTS = "pullrequests/{owner}/{repo}"
     const val BRANCHES = "branches/{owner}/{repo}"
     const val STATS = "stats/{owner}/{repo}"
+    const val COMMIT_DETAIL = "commit/{owner}/{repo}/{sha}"
 
     fun dashboard(owner: String, repo: String) = "dashboard/$owner/$repo"
     fun pullRequests(owner: String, repo: String) = "pullrequests/$owner/$repo"
     fun branches(owner: String, repo: String) = "branches/$owner/$repo"
     fun stats(owner: String, repo: String) = "stats/$owner/$repo"
+    fun commitDetail(owner: String, repo: String, sha: String) = "commit/$owner/$repo/$sha"
 }
 
 @Composable
@@ -40,13 +43,6 @@ fun SalvioNavGraph() {
     val authViewModel: AuthViewModel = viewModel()
     val repoViewModel: RepoViewModel = viewModel()
     val dashboardViewModel: DashboardViewModel = viewModel()
-
-    val authState by authViewModel.authState.collectAsState()
-
-    val startDestination = when (authState) {
-        is AuthState.Success -> Routes.REPO_LIST
-        else -> Routes.LOGIN
-    }
 
     NavHost(navController = navController, startDestination = Routes.LOGIN) {
         composable(Routes.LOGIN) {
@@ -81,9 +77,9 @@ fun SalvioNavGraph() {
                 navArgument("owner") { type = NavType.StringType },
                 navArgument("repo") { type = NavType.StringType }
             )
-        ) { backStackEntry ->
-            val owner = backStackEntry.arguments?.getString("owner") ?: ""
-            val repo = backStackEntry.arguments?.getString("repo") ?: ""
+        ) { back ->
+            val owner = back.arguments?.getString("owner") ?: ""
+            val repo = back.arguments?.getString("repo") ?: ""
             DashboardScreen(
                 owner = owner,
                 repoName = repo,
@@ -91,6 +87,7 @@ fun SalvioNavGraph() {
                 onNavigateToPRs = { navController.navigate(Routes.pullRequests(owner, repo)) },
                 onNavigateToBranches = { navController.navigate(Routes.branches(owner, repo)) },
                 onNavigateToStats = { navController.navigate(Routes.stats(owner, repo)) },
+                onNavigateToCommit = { sha -> navController.navigate(Routes.commitDetail(owner, repo, sha)) },
                 onBack = { navController.popBackStack() }
             )
         }
@@ -101,12 +98,11 @@ fun SalvioNavGraph() {
                 navArgument("owner") { type = NavType.StringType },
                 navArgument("repo") { type = NavType.StringType }
             )
-        ) { backStackEntry ->
-            val owner = backStackEntry.arguments?.getString("owner") ?: ""
-            val repo = backStackEntry.arguments?.getString("repo") ?: ""
+        ) { back ->
+            val owner = back.arguments?.getString("owner") ?: ""
+            val repo = back.arguments?.getString("repo") ?: ""
             PullRequestScreen(
-                owner = owner,
-                repoName = repo,
+                owner = owner, repoName = repo,
                 dashboardViewModel = dashboardViewModel,
                 onBack = { navController.popBackStack() }
             )
@@ -118,12 +114,11 @@ fun SalvioNavGraph() {
                 navArgument("owner") { type = NavType.StringType },
                 navArgument("repo") { type = NavType.StringType }
             )
-        ) { backStackEntry ->
-            val owner = backStackEntry.arguments?.getString("owner") ?: ""
-            val repo = backStackEntry.arguments?.getString("repo") ?: ""
+        ) { back ->
+            val owner = back.arguments?.getString("owner") ?: ""
+            val repo = back.arguments?.getString("repo") ?: ""
             BranchScreen(
-                owner = owner,
-                repoName = repo,
+                owner = owner, repoName = repo,
                 dashboardViewModel = dashboardViewModel,
                 onBack = { navController.popBackStack() }
             )
@@ -135,12 +130,29 @@ fun SalvioNavGraph() {
                 navArgument("owner") { type = NavType.StringType },
                 navArgument("repo") { type = NavType.StringType }
             )
-        ) { backStackEntry ->
-            val owner = backStackEntry.arguments?.getString("owner") ?: ""
-            val repo = backStackEntry.arguments?.getString("repo") ?: ""
+        ) { back ->
+            val owner = back.arguments?.getString("owner") ?: ""
+            val repo = back.arguments?.getString("repo") ?: ""
             StatsScreen(
-                owner = owner,
-                repoName = repo,
+                owner = owner, repoName = repo,
+                dashboardViewModel = dashboardViewModel,
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(
+            Routes.COMMIT_DETAIL,
+            arguments = listOf(
+                navArgument("owner") { type = NavType.StringType },
+                navArgument("repo") { type = NavType.StringType },
+                navArgument("sha") { type = NavType.StringType }
+            )
+        ) { back ->
+            val owner = back.arguments?.getString("owner") ?: ""
+            val repo = back.arguments?.getString("repo") ?: ""
+            val sha = back.arguments?.getString("sha") ?: ""
+            CommitDetailScreen(
+                owner = owner, repoName = repo, sha = sha,
                 dashboardViewModel = dashboardViewModel,
                 onBack = { navController.popBackStack() }
             )
