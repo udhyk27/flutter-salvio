@@ -55,7 +55,14 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
                     _authState.value = AuthState.Success(user)
                 },
                 onFailure = { e ->
-                    _authState.value = AuthState.Error(e.message ?: "인증 실패")
+                    val msg = when {
+                        e.message?.contains("401") == true -> "토큰이 유효하지 않습니다."
+                        e.message?.contains("network", ignoreCase = true) == true ||
+                        e is java.net.UnknownHostException ||
+                        e is java.net.SocketTimeoutException -> "네트워크 연결을 확인하세요."
+                        else -> "인증에 실패했습니다. 다시 시도해주세요."
+                    }
+                    _authState.value = AuthState.Error(msg)
                 }
             )
         }

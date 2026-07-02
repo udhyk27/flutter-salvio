@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <full-backup-content>
     <exclude domain="datastore" path="salvio_prefs.preferences_pb"/>
+    <exclude domain="database" path="salvio_cache.db"/>
 </full-backup-content>
