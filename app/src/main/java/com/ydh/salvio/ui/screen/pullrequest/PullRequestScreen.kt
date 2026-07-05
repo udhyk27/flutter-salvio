@@ -19,6 +19,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.ydh.salvio.data.model.CheckRunsResponse
 import com.ydh.salvio.data.model.GitHubPrReview
 import com.ydh.salvio.data.model.GitHubPullRequest
 import com.ydh.salvio.ui.theme.*
@@ -111,7 +112,8 @@ fun PullRequestScreen(
                             PullRequestCard(
                                 pr = pr,
                                 state = prState,
-                                reviews = state.prReviews[pr.number] ?: emptyList()
+                                reviews = state.prReviews[pr.number] ?: emptyList(),
+                                checkRuns = state.prCheckRuns[pr.number]
                             )
                         }
                     }
@@ -125,7 +127,8 @@ fun PullRequestScreen(
 private fun PullRequestCard(
     pr: GitHubPullRequest,
     state: String,
-    reviews: List<GitHubPrReview>
+    reviews: List<GitHubPrReview>,
+    checkRuns: CheckRunsResponse? = null
 ) {
     val stateColor = when (state) {
         "open" -> GitHubGreen
@@ -178,10 +181,10 @@ private fun PullRequestCard(
                 }
             }
 
-            // 리뷰 상태 뱃지
-            if (reviewSummary.isNotEmpty()) {
+            if (reviewSummary.isNotEmpty() || checkRuns != null) {
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    checkRuns?.let { CiBadge(it) }
                     reviewSummary.forEach { (label, color) ->
                         ReviewBadge(label = label, color = color)
                     }
@@ -206,6 +209,22 @@ private fun PullRequestCard(
             }
         }
     }
+}
+
+@Composable
+private fun CiBadge(checkRuns: CheckRunsResponse) {
+    if (checkRuns.totalCount == 0) return
+    val runs = checkRuns.checkRuns
+    val allCompleted = runs.all { it.status == "completed" }
+    val (label, color) = when {
+        !allCompleted -> "CI 실행 중" to GitHubYellow
+        runs.all { it.conclusion == "success" || it.conclusion == "skipped" || it.conclusion == "neutral" } ->
+            "CI 통과" to GitHubGreen
+        runs.any { it.conclusion == "failure" || it.conclusion == "timed_out" } ->
+            "CI 실패" to GitHubRed
+        else -> "CI ${runs.first().conclusion ?: "완료"}" to GitHubTextSecondary
+    }
+    ReviewBadge(label = label, color = color)
 }
 
 @Composable

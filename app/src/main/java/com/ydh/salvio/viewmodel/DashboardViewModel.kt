@@ -32,6 +32,20 @@ data class PrUiState(
     val closedPrs: List<GitHubPullRequest> = emptyList(),
     val mergedPrs: List<GitHubPullRequest> = emptyList(),
     val prReviews: Map<Int, List<GitHubPrReview>> = emptyMap(),
+    val prCheckRuns: Map<Int, CheckRunsResponse> = emptyMap(),
+    val error: String? = null
+)
+
+data class IssueUiState(
+    val isLoading: Boolean = false,
+    val openIssues: List<GitHubIssue> = emptyList(),
+    val closedIssues: List<GitHubIssue> = emptyList(),
+    val error: String? = null
+)
+
+data class ReleaseUiState(
+    val isLoading: Boolean = false,
+    val releases: List<GitHubRelease> = emptyList(),
     val error: String? = null
 )
 
@@ -75,6 +89,12 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
 
     private val _commitDetailState = MutableStateFlow(CommitDetailUiState())
     val commitDetailState: StateFlow<CommitDetailUiState> = _commitDetailState.asStateFlow()
+
+    private val _issueState = MutableStateFlow(IssueUiState())
+    val issueState: StateFlow<IssueUiState> = _issueState.asStateFlow()
+
+    private val _releaseState = MutableStateFlow(ReleaseUiState())
+    val releaseState: StateFlow<ReleaseUiState> = _releaseState.asStateFlow()
 
     private suspend fun getRepo(): GitHubRepository? {
         val token = dataStore.token.first() ?: return null
@@ -135,23 +155,52 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
                 error = open.await().exceptionOrNull()?.message
             )
 
-            // 리뷰 상태 비동기 로드
-            loadPrReviews(owner, repoName, openList)
+            // 리뷰 + CI 상태 비동기 로드
+            loadPrDetails(owner, repoName, openList)
         }
     }
 
-    private fun loadPrReviews(owner: String, repoName: String, prs: List<GitHubPullRequest>) {
+    private fun loadPrDetails(owner: String, repoName: String, prs: List<GitHubPullRequest>) {
         viewModelScope.launch {
             val repo = getRepo() ?: return@launch
             val reviewMap = mutableMapOf<Int, List<GitHubPrReview>>()
+            val checkRunMap = mutableMapOf<Int, CheckRunsResponse>()
 
             prs.take(20).forEach { pr ->
                 repo.getPrReviews(owner, repoName, pr.number).getOrNull()?.let { reviews ->
                     reviewMap[pr.number] = reviews
                 }
+                repo.getCheckRuns(owner, repoName, pr.head.sha).getOrNull()?.let { runs ->
+                    checkRunMap[pr.number] = runs
+                }
+                _prState.value = _prState.value.copy(prReviews = reviewMap.toMap(), prCheckRuns = checkRunMap.toMap())
             }
+        }
+    }
 
-            _prState.value = _prState.value.copy(prReviews = reviewMap)
+    fun loadIssues(owner: String, repoName: String) {
+        viewModelScope.launch {
+            _issueState.value = IssueUiState(isLoading = true)
+            val repo = getRepo() ?: return@launch
+            val open = async { repo.getIssues(owner, repoName, "open") }
+            val closed = async { repo.getIssues(owner, repoName, "closed") }
+            _issueState.value = IssueUiState(
+                isLoading = false,
+                openIssues = open.await().getOrElse { emptyList() },
+                closedIssues = closed.await().getOrElse { emptyList() },
+                error = open.await().exceptionOrNull()?.message
+            )
+        }
+    }
+
+    fun loadReleases(owner: String, repoName: String) {
+        viewModelScope.launch {
+            _releaseState.value = ReleaseUiState(isLoading = true)
+            val repo = getRepo() ?: return@launch
+            repo.getReleases(owner, repoName).fold(
+                onSuccess = { _releaseState.value = ReleaseUiState(releases = it) },
+                onFailure = { _releaseState.value = ReleaseUiState(error = it.message) }
+            )
         }
     }
 

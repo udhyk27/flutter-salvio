@@ -64,4 +64,31 @@ interface CacheDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertCommitActivity(activity: CachedCommitActivity)
+
+    // Issues
+    @Query("SELECT * FROM cached_issues WHERE repoFullName = :repoFullName AND state = :state")
+    suspend fun getIssues(repoFullName: String, state: String): List<CachedIssue>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertIssues(issues: List<CachedIssue>)
+
+    @Query("DELETE FROM cached_issues WHERE repoFullName = :repoFullName AND state = :state")
+    suspend fun deleteIssues(repoFullName: String, state: String)
+
+    // Releases
+    @Query("SELECT * FROM cached_releases WHERE repoFullName = :repoFullName ORDER BY cachedAt DESC")
+    suspend fun getReleases(repoFullName: String): List<CachedRelease>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertReleases(releases: List<CachedRelease>)
+
+    @Query("DELETE FROM cached_releases WHERE repoFullName = :repoFullName")
+    suspend fun deleteReleases(repoFullName: String)
+
+    // Check Runs
+    @Query("SELECT * FROM cached_check_runs WHERE id = :id")
+    suspend fun getCheckRuns(id: String): CachedCheckRuns?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertCheckRuns(checkRuns: CachedCheckRuns)
 }

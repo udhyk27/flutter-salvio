@@ -130,6 +130,77 @@ data class CommitWeekActivity(
     val days: List<Int>
 )
 
+data class GitHubLabel(
+    val id: Long,
+    val name: String,
+    val color: String,
+    val description: String?
+)
+
+data class GitHubMilestone(
+    val id: Long,
+    val number: Int,
+    val title: String,
+    val state: String,
+    @SerializedName("open_issues") val openIssues: Int,
+    @SerializedName("closed_issues") val closedIssues: Int
+)
+
+data class PrRef(val url: String? = null)
+
+data class GitHubIssue(
+    val id: Long,
+    val number: Int,
+    val title: String,
+    val body: String?,
+    val state: String,
+    val user: GitHubUser,
+    val labels: List<GitHubLabel>,
+    val milestone: GitHubMilestone?,
+    val comments: Int,
+    @SerializedName("created_at") val createdAt: String,
+    @SerializedName("updated_at") val updatedAt: String,
+    @SerializedName("closed_at") val closedAt: String?,
+    @SerializedName("html_url") val htmlUrl: String,
+    @SerializedName("pull_request") val pullRequest: PrRef? = null
+)
+
+data class GitHubAsset(
+    val id: Long,
+    val name: String,
+    val size: Long,
+    @SerializedName("download_count") val downloadCount: Int,
+    @SerializedName("browser_download_url") val downloadUrl: String,
+    @SerializedName("content_type") val contentType: String
+)
+
+data class GitHubRelease(
+    val id: Long,
+    @SerializedName("tag_name") val tagName: String,
+    val name: String?,
+    val body: String?,
+    val draft: Boolean,
+    val prerelease: Boolean,
+    val author: GitHubUser,
+    @SerializedName("published_at") val publishedAt: String?,
+    @SerializedName("created_at") val createdAt: String,
+    val assets: List<GitHubAsset>,
+    @SerializedName("html_url") val htmlUrl: String
+)
+
+data class CheckRun(
+    val id: Long,
+    val name: String,
+    val status: String,
+    val conclusion: String?,
+    @SerializedName("html_url") val htmlUrl: String
+)
+
+data class CheckRunsResponse(
+    @SerializedName("total_count") val totalCount: Int,
+    @SerializedName("check_runs") val checkRuns: List<CheckRun>
+)
+
 data class GitHubRepoStats(
     val repoFullName: String,
     val commitCount: Int,

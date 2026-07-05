@@ -78,4 +78,26 @@ interface GitHubApi {
         @Path("owner") owner: String,
         @Path("repo") repo: String
     ): List<CommitWeekActivity>
+
+    @GET("repos/{owner}/{repo}/issues")
+    suspend fun getIssues(
+        @Path("owner") owner: String,
+        @Path("repo") repo: String,
+        @Query("state") state: String = "open",
+        @Query("per_page") perPage: Int = 50
+    ): List<GitHubIssue>
+
+    @GET("repos/{owner}/{repo}/releases")
+    suspend fun getReleases(
+        @Path("owner") owner: String,
+        @Path("repo") repo: String,
+        @Query("per_page") perPage: Int = 20
+    ): List<GitHubRelease>
+
+    @GET("repos/{owner}/{repo}/commits/{ref}/check-runs")
+    suspend fun getCheckRuns(
+        @Path("owner") owner: String,
+        @Path("repo") repo: String,
+        @Path("ref") ref: String
+    ): CheckRunsResponse
 }

@@ -39,6 +39,8 @@ fun DashboardScreen(
     onNavigateToBranches: () -> Unit,
     onNavigateToStats: () -> Unit,
     onNavigateToCommit: (sha: String) -> Unit,
+    onNavigateToIssues: () -> Unit,
+    onNavigateToReleases: () -> Unit,
     onBack: () -> Unit
 ) {
     val state by dashboardViewModel.dashboardState.collectAsState()
@@ -85,7 +87,7 @@ fun DashboardScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             item { StatsRow(state, onNavigateToPRs, onNavigateToBranches) }
-            item { QuickActionsRow(onNavigateToPRs, onNavigateToBranches, onNavigateToStats) }
+            item { QuickActionsRow(onNavigateToPRs, onNavigateToBranches, onNavigateToStats, onNavigateToIssues, onNavigateToReleases) }
             item { RecentCommitsSection(state.recentCommits, onNavigateToCommit) }
             item { OpenPRsSection(state, onNavigateToPRs) }
             item { ContributorsSection(state) }
@@ -163,30 +165,27 @@ private fun StatCard(
 private fun QuickActionsRow(
     onNavigateToPRs: () -> Unit,
     onNavigateToBranches: () -> Unit,
-    onNavigateToStats: () -> Unit
+    onNavigateToStats: () -> Unit,
+    onNavigateToIssues: () -> Unit,
+    onNavigateToReleases: () -> Unit
 ) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        ActionButton(
-            modifier = Modifier.weight(1f),
-            icon = Icons.Default.MergeType,
-            label = "Pull Requests",
-            onClick = onNavigateToPRs
-        )
-        ActionButton(
-            modifier = Modifier.weight(1f),
-            icon = Icons.Default.AccountTree,
-            label = "브랜치",
-            onClick = onNavigateToBranches
-        )
-        ActionButton(
-            modifier = Modifier.weight(1f),
-            icon = Icons.Default.BarChart,
-            label = "통계",
-            onClick = onNavigateToStats
-        )
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            ActionButton(Modifier.weight(1f), Icons.Default.MergeType, "Pull Requests", onNavigateToPRs)
+            ActionButton(Modifier.weight(1f), Icons.Default.AccountTree, "브랜치", onNavigateToBranches)
+            ActionButton(Modifier.weight(1f), Icons.Default.BarChart, "통계", onNavigateToStats)
+        }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            ActionButton(Modifier.weight(1f), Icons.Default.BugReport, "Issues", onNavigateToIssues)
+            ActionButton(Modifier.weight(1f), Icons.Default.LocalOffer, "Releases", onNavigateToReleases)
+            Spacer(modifier = Modifier.weight(1f))
+        }
     }
 }
 

@@ -12,9 +12,12 @@ import androidx.room.RoomDatabase
         CachedPr::class,
         CachedBranch::class,
         CachedPrReview::class,
-        CachedCommitActivity::class
+        CachedCommitActivity::class,
+        CachedIssue::class,
+        CachedRelease::class,
+        CachedCheckRuns::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -29,7 +32,7 @@ abstract class AppDatabase : RoomDatabase() {
                     context.applicationContext,
                     AppDatabase::class.java,
                     "salvio_cache.db"
-                ).build().also { INSTANCE = it }
+                ).fallbackToDestructiveMigration().build().also { INSTANCE = it }
             }
     }
 }

@@ -50,3 +50,29 @@ data class CachedCommitActivity(
     val json: String,
     val cachedAt: Long = System.currentTimeMillis()
 )
+
+@Entity(tableName = "cached_issues")
+data class CachedIssue(
+    @PrimaryKey val id: String,
+    val repoFullName: String,
+    val state: String,
+    val json: String,
+    val cachedAt: Long = System.currentTimeMillis()
+)
+
+@Entity(tableName = "cached_releases")
+data class CachedRelease(
+    @PrimaryKey val id: String,
+    val repoFullName: String,
+    val json: String,
+    val cachedAt: Long = System.currentTimeMillis()
+)
+
+@Entity(tableName = "cached_check_runs")
+data class CachedCheckRuns(
+    @PrimaryKey val id: String,
+    val repoFullName: String,
+    val ref: String,
+    val json: String,
+    val cachedAt: Long = System.currentTimeMillis()
+)

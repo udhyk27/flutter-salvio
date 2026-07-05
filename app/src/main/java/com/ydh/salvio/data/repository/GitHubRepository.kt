@@ -104,6 +104,44 @@ class GitHubRepository(
         reviews
     }
 
+    suspend fun getIssues(owner: String, repo: String, state: String = "open"): Result<List<GitHubIssue>> = runCatching {
+        val repoFullName = "$owner/$repo"
+        val cached = dao?.getIssues(repoFullName, state)
+        if (!cached.isNullOrEmpty() && !isExpired(cached.first().cachedAt)) {
+            val type = object : TypeToken<GitHubIssue>() {}.type
+            return@runCatching cached.map { gson.fromJson(it.json, type) }
+        }
+        val issues = api.getIssues(owner, repo, state).filter { it.pullRequest == null }
+        dao?.deleteIssues(repoFullName, state)
+        dao?.insertIssues(issues.map { CachedIssue("$repoFullName:${it.number}:$state", repoFullName, state, gson.toJson(it)) })
+        issues
+    }
+
+    suspend fun getReleases(owner: String, repo: String): Result<List<GitHubRelease>> = runCatching {
+        val repoFullName = "$owner/$repo"
+        val cached = dao?.getReleases(repoFullName)
+        if (!cached.isNullOrEmpty() && !isExpired(cached.first().cachedAt)) {
+            val type = object : TypeToken<GitHubRelease>() {}.type
+            return@runCatching cached.map { gson.fromJson(it.json, type) }
+        }
+        val releases = api.getReleases(owner, repo)
+        dao?.deleteReleases(repoFullName)
+        dao?.insertReleases(releases.map { CachedRelease("$repoFullName:${it.id}", repoFullName, gson.toJson(it)) })
+        releases
+    }
+
+    suspend fun getCheckRuns(owner: String, repo: String, ref: String): Result<CheckRunsResponse> = runCatching {
+        val repoFullName = "$owner/$repo"
+        val cacheId = "$repoFullName:$ref"
+        val cached = dao?.getCheckRuns(cacheId)
+        if (cached != null && !isExpired(cached.cachedAt)) {
+            return@runCatching gson.fromJson(cached.json, CheckRunsResponse::class.java)
+        }
+        val result = api.getCheckRuns(owner, repo, ref)
+        dao?.insertCheckRuns(CachedCheckRuns(cacheId, repoFullName, ref, gson.toJson(result)))
+        result
+    }
+
     suspend fun getCommitActivity(owner: String, repo: String): Result<List<CommitWeekActivity>> = runCatching {
         val repoFullName = "$owner/$repo"
         val cached = dao?.getCommitActivity(repoFullName)
