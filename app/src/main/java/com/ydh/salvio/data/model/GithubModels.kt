@@ -148,6 +148,67 @@ data class GitHubMilestone(
 
 data class PrRef(val url: String? = null)
 
+data class PullRequestFile(
+    val filename: String,
+    val status: String,
+    val additions: Int,
+    val deletions: Int,
+    val changes: Int,
+    val patch: String?
+)
+
+data class TrafficPoint(
+    val timestamp: String,
+    val count: Int,
+    val uniques: Int
+)
+
+data class TrafficViews(
+    val count: Int,
+    val uniques: Int,
+    val views: List<TrafficPoint>
+)
+
+data class TrafficClones(
+    val count: Int,
+    val uniques: Int,
+    val clones: List<TrafficPoint>
+)
+
+data class ContributorWeekData(
+    val w: Long,
+    val a: Int,
+    val d: Int,
+    val c: Int
+)
+
+data class ContributorWeeklyStats(
+    val author: GitHubUser,
+    val total: Int,
+    val weeks: List<ContributorWeekData>
+)
+
+data class NotificationRepo(
+    val id: Long,
+    val name: String,
+    @SerializedName("full_name") val fullName: String
+)
+
+data class NotificationSubject(
+    val title: String,
+    val url: String?,
+    val type: String
+)
+
+data class GitHubNotification(
+    val id: String,
+    val repository: NotificationRepo,
+    val subject: NotificationSubject,
+    val reason: String,
+    val unread: Boolean,
+    @SerializedName("updated_at") val updatedAt: String
+)
+
 data class GitHubIssue(
     val id: Long,
     val number: Int,

@@ -15,9 +15,13 @@ import androidx.room.RoomDatabase
         CachedCommitActivity::class,
         CachedIssue::class,
         CachedRelease::class,
-        CachedCheckRuns::class
+        CachedCheckRuns::class,
+        CachedPrFiles::class,
+        CachedTrafficViews::class,
+        CachedTrafficClones::class,
+        CachedContributorStats::class
     ],
-    version = 2,
+    version = 3,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

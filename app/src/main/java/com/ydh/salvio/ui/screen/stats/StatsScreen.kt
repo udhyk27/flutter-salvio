@@ -19,7 +19,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.ydh.salvio.data.model.ContributorWeeklyStats
 import com.ydh.salvio.data.model.GitHubContributor
+import com.ydh.salvio.data.model.TrafficClones
+import com.ydh.salvio.data.model.TrafficViews
 import com.ydh.salvio.ui.component.CommitActivityChart
 import com.ydh.salvio.ui.theme.*
 import com.ydh.salvio.viewmodel.DashboardViewModel
@@ -68,11 +71,20 @@ fun StatsScreen(
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            item {
-                CommitActivityCard(activity = state.commitActivity)
+            item { CommitActivityCard(activity = state.commitActivity) }
+            if (state.trafficViews != null || state.trafficClones != null) {
+                item {
+                    TrafficCard(
+                        views = state.trafficViews,
+                        clones = state.trafficClones
+                    )
+                }
             }
             item {
-                ContributorRankingCard(contributors = state.contributors)
+                ContributorRankingCard(
+                    contributors = state.contributors,
+                    weeklyStats = state.contributorWeeklyStats
+                )
             }
             item {
                 RecentCommitAuthorsCard(
@@ -114,7 +126,79 @@ private fun CommitActivityCard(activity: List<CommitWeekActivity>) {
 }
 
 @Composable
-private fun ContributorRankingCard(contributors: List<GitHubContributor>) {
+private fun TrafficCard(views: TrafficViews?, clones: TrafficClones?) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(10.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, GitHubBorder)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.TrendingUp, contentDescription = null, tint = GitHubBlue, modifier = Modifier.size(18.dp))
+                Spacer(modifier = Modifier.width(6.dp))
+                Text("저장소 트래픽 (최근 14일)", fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                views?.let {
+                    TrafficStatItem(
+                        modifier = Modifier.weight(1f),
+                        icon = Icons.Default.Visibility,
+                        label = "조회수",
+                        total = it.count,
+                        uniques = it.uniques,
+                        color = GitHubBlue
+                    )
+                }
+                clones?.let {
+                    TrafficStatItem(
+                        modifier = Modifier.weight(1f),
+                        icon = Icons.Default.Download,
+                        label = "클론 수",
+                        total = it.count,
+                        uniques = it.uniques,
+                        color = GitHubGreen
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun TrafficStatItem(
+    modifier: Modifier = Modifier,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    total: Int,
+    uniques: Int,
+    color: androidx.compose.ui.graphics.Color
+) {
+    Card(
+        modifier = modifier,
+        shape = RoundedCornerShape(8.dp),
+        colors = CardDefaults.cardColors(containerColor = color.copy(alpha = 0.08f)),
+        border = BorderStroke(1.dp, color.copy(alpha = 0.2f))
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(14.dp))
+                Text(text = label, fontSize = 12.sp, color = GitHubTextSecondary)
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(text = "$total", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = color)
+            Text(text = "순방문자 $uniques", fontSize = 11.sp, color = GitHubTextSecondary)
+        }
+    }
+}
+
+@Composable
+private fun ContributorRankingCard(
+    contributors: List<GitHubContributor>,
+    weeklyStats: List<ContributorWeeklyStats> = emptyList()
+) {
+    val statsMap = weeklyStats.associate { it.author.login to it }
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(10.dp),
@@ -138,7 +222,8 @@ private fun ContributorRankingCard(contributors: List<GitHubContributor>) {
                     ContributorRow(
                         rank = index + 1,
                         contributor = contributor,
-                        maxContributions = maxContributions
+                        maxContributions = maxContributions,
+                        weeklyStats = statsMap[contributor.login]
                     )
                     if (index < contributors.size - 1) {
                         HorizontalDivider(color = GitHubBorder, thickness = 0.5.dp, modifier = Modifier.padding(vertical = 4.dp))
@@ -150,7 +235,12 @@ private fun ContributorRankingCard(contributors: List<GitHubContributor>) {
 }
 
 @Composable
-private fun ContributorRow(rank: Int, contributor: GitHubContributor, maxContributions: Int) {
+private fun ContributorRow(
+    rank: Int,
+    contributor: GitHubContributor,
+    maxContributions: Int,
+    weeklyStats: ContributorWeeklyStats? = null
+) {
     val rankColor = when (rank) {
         1 -> GitHubYellow
         2 -> GitHubTextSecondary
@@ -181,11 +271,24 @@ private fun ContributorRow(rank: Int, contributor: GitHubContributor, maxContrib
                 color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.weight(1f)
             )
-            Text(
-                text = "${contributor.contributions} commits",
-                fontSize = 12.sp,
-                color = GitHubTextSecondary
-            )
+            Column(horizontalAlignment = Alignment.End) {
+                Text(
+                    text = "${contributor.contributions} commits",
+                    fontSize = 12.sp,
+                    color = GitHubTextSecondary
+                )
+                weeklyStats?.let { ws ->
+                    val totalAdditions = ws.weeks.sumOf { it.a }
+                    val totalDeletions = ws.weeks.sumOf { it.d }
+                    if (totalAdditions > 0 || totalDeletions > 0) {
+                        Text(
+                            text = "+$totalAdditions / -$totalDeletions",
+                            fontSize = 10.sp,
+                            color = GitHubTextSecondary
+                        )
+                    }
+                }
+            }
         }
         Spacer(modifier = Modifier.height(4.dp))
         Row(modifier = Modifier.padding(start = 38.dp)) {

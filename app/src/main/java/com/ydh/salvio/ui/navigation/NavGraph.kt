@@ -14,6 +14,7 @@ import com.ydh.salvio.ui.screen.commit.CommitDetailScreen
 import com.ydh.salvio.ui.screen.dashboard.DashboardScreen
 import com.ydh.salvio.ui.screen.issue.IssueScreen
 import com.ydh.salvio.ui.screen.login.LoginScreen
+import com.ydh.salvio.ui.screen.notification.NotificationScreen
 import com.ydh.salvio.ui.screen.pullrequest.PullRequestScreen
 import com.ydh.salvio.ui.screen.release.ReleaseScreen
 import com.ydh.salvio.ui.screen.repos.RepoListScreen
@@ -21,6 +22,7 @@ import com.ydh.salvio.ui.screen.stats.StatsScreen
 import com.ydh.salvio.viewmodel.AuthState
 import com.ydh.salvio.viewmodel.AuthViewModel
 import com.ydh.salvio.viewmodel.DashboardViewModel
+import com.ydh.salvio.viewmodel.NotificationViewModel
 import com.ydh.salvio.viewmodel.RepoViewModel
 
 object Routes {
@@ -33,6 +35,7 @@ object Routes {
     const val COMMIT_DETAIL = "commit/{owner}/{repo}/{sha}"
     const val ISSUES = "issues/{owner}/{repo}"
     const val RELEASES = "releases/{owner}/{repo}"
+    const val NOTIFICATIONS = "notifications"
 
     fun dashboard(owner: String, repo: String) = "dashboard/$owner/$repo"
     fun pullRequests(owner: String, repo: String) = "pullrequests/$owner/$repo"
@@ -49,6 +52,7 @@ fun SalvioNavGraph() {
     val authViewModel: AuthViewModel = viewModel()
     val repoViewModel: RepoViewModel = viewModel()
     val dashboardViewModel: DashboardViewModel = viewModel()
+    val notificationViewModel: NotificationViewModel = viewModel()
 
     NavHost(navController = navController, startDestination = Routes.LOGIN) {
         composable(Routes.LOGIN) {
@@ -73,7 +77,17 @@ fun SalvioNavGraph() {
                     navController.navigate(Routes.LOGIN) {
                         popUpTo(0) { inclusive = true }
                     }
+                },
+                onNavigateToNotifications = {
+                    navController.navigate(Routes.NOTIFICATIONS)
                 }
+            )
+        }
+
+        composable(Routes.NOTIFICATIONS) {
+            NotificationScreen(
+                notificationViewModel = notificationViewModel,
+                onBack = { navController.popBackStack() }
             )
         }
 

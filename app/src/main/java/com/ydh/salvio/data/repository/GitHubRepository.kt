@@ -130,6 +130,63 @@ class GitHubRepository(
         releases
     }
 
+    suspend fun getPrFiles(owner: String, repo: String, prNumber: Int): Result<List<PullRequestFile>> = runCatching {
+        val repoFullName = "$owner/$repo"
+        val cached = dao?.getPrFiles(repoFullName, prNumber)
+        if (cached != null && !isExpired(cached.cachedAt)) {
+            val type = object : TypeToken<List<PullRequestFile>>() {}.type
+            return@runCatching gson.fromJson(cached.json, type)
+        }
+        val files = api.getPrFiles(owner, repo, prNumber)
+        dao?.insertPrFiles(CachedPrFiles("$repoFullName:$prNumber", repoFullName, prNumber, gson.toJson(files)))
+        files
+    }
+
+    suspend fun getTrafficViews(owner: String, repo: String): Result<TrafficViews> = runCatching {
+        val repoFullName = "$owner/$repo"
+        val cached = dao?.getTrafficViews(repoFullName)
+        if (cached != null && System.currentTimeMillis() - cached.cachedAt < 60 * 60 * 1000L) {
+            return@runCatching gson.fromJson(cached.json, TrafficViews::class.java)
+        }
+        val result = api.getTrafficViews(owner, repo)
+        dao?.insertTrafficViews(CachedTrafficViews(repoFullName, gson.toJson(result)))
+        result
+    }
+
+    suspend fun getTrafficClones(owner: String, repo: String): Result<TrafficClones> = runCatching {
+        val repoFullName = "$owner/$repo"
+        val cached = dao?.getTrafficClones(repoFullName)
+        if (cached != null && System.currentTimeMillis() - cached.cachedAt < 60 * 60 * 1000L) {
+            return@runCatching gson.fromJson(cached.json, TrafficClones::class.java)
+        }
+        val result = api.getTrafficClones(owner, repo)
+        dao?.insertTrafficClones(CachedTrafficClones(repoFullName, gson.toJson(result)))
+        result
+    }
+
+    suspend fun getContributorStats(owner: String, repo: String): Result<List<ContributorWeeklyStats>> = runCatching {
+        val repoFullName = "$owner/$repo"
+        val cached = dao?.getContributorStats(repoFullName)
+        if (cached != null && System.currentTimeMillis() - cached.cachedAt < 60 * 60 * 1000L) {
+            val type = object : TypeToken<List<ContributorWeeklyStats>>() {}.type
+            return@runCatching gson.fromJson(cached.json, type)
+        }
+        val result = api.getContributorStats(owner, repo)
+        if (result.isNotEmpty()) {
+            dao?.insertContributorStats(CachedContributorStats(repoFullName, gson.toJson(result)))
+        }
+        result
+    }
+
+    suspend fun getNotifications(): Result<List<GitHubNotification>> = runCatching {
+        api.getNotifications()
+    }
+
+    suspend fun markNotificationRead(threadId: String): Result<Unit> = runCatching {
+        api.markNotificationRead(threadId)
+        Unit
+    }
+
     suspend fun getCheckRuns(owner: String, repo: String, ref: String): Result<CheckRunsResponse> = runCatching {
         val repoFullName = "$owner/$repo"
         val cacheId = "$repoFullName:$ref"

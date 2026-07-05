@@ -76,3 +76,33 @@ data class CachedCheckRuns(
     val json: String,
     val cachedAt: Long = System.currentTimeMillis()
 )
+
+@Entity(tableName = "cached_pr_files")
+data class CachedPrFiles(
+    @PrimaryKey val id: String,
+    val repoFullName: String,
+    val prNumber: Int,
+    val json: String,
+    val cachedAt: Long = System.currentTimeMillis()
+)
+
+@Entity(tableName = "cached_traffic_views")
+data class CachedTrafficViews(
+    @PrimaryKey val repoFullName: String,
+    val json: String,
+    val cachedAt: Long = System.currentTimeMillis()
+)
+
+@Entity(tableName = "cached_traffic_clones")
+data class CachedTrafficClones(
+    @PrimaryKey val repoFullName: String,
+    val json: String,
+    val cachedAt: Long = System.currentTimeMillis()
+)
+
+@Entity(tableName = "cached_contributor_stats")
+data class CachedContributorStats(
+    @PrimaryKey val repoFullName: String,
+    val json: String,
+    val cachedAt: Long = System.currentTimeMillis()
+)

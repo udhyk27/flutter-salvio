@@ -33,6 +33,7 @@ data class PrUiState(
     val mergedPrs: List<GitHubPullRequest> = emptyList(),
     val prReviews: Map<Int, List<GitHubPrReview>> = emptyMap(),
     val prCheckRuns: Map<Int, CheckRunsResponse> = emptyMap(),
+    val prFiles: Map<Int, List<PullRequestFile>> = emptyMap(),
     val error: String? = null
 )
 
@@ -59,8 +60,12 @@ data class BranchUiState(
 data class StatsUiState(
     val isLoading: Boolean = false,
     val contributors: List<GitHubContributor> = emptyList(),
+    val contributorWeeklyStats: List<ContributorWeeklyStats> = emptyList(),
     val commits: List<GitHubCommit> = emptyList(),
     val commitActivity: List<CommitWeekActivity> = emptyList(),
+    val trafficViews: TrafficViews? = null,
+    val trafficClones: TrafficClones? = null,
+    val trafficAccessDenied: Boolean = false,
     val error: String? = null
 )
 
@@ -245,14 +250,33 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
             val contributors = async { repo.getContributors(owner, repoName) }
             val commits = async { repo.getCommits(owner, repoName, 1) }
             val activity = async { repo.getCommitActivity(owner, repoName) }
+            val weeklyStats = async { repo.getContributorStats(owner, repoName) }
+            val trafficViews = async { repo.getTrafficViews(owner, repoName) }
+            val trafficClones = async { repo.getTrafficClones(owner, repoName) }
+
+            val trafficViewsResult = trafficViews.await()
+            val trafficAccessDenied = trafficViewsResult.exceptionOrNull()?.message?.contains("403") == true
 
             _statsState.value = StatsUiState(
                 isLoading = false,
                 contributors = contributors.await().getOrElse { emptyList() },
+                contributorWeeklyStats = weeklyStats.await().getOrElse { emptyList() },
                 commits = commits.await().getOrElse { emptyList() },
                 commitActivity = activity.await().getOrElse { emptyList() },
+                trafficViews = trafficViewsResult.getOrNull(),
+                trafficClones = trafficClones.await().getOrNull(),
+                trafficAccessDenied = trafficAccessDenied,
                 error = contributors.await().exceptionOrNull()?.message
             )
+        }
+    }
+
+    fun loadPrFiles(owner: String, repoName: String, prNumber: Int) {
+        viewModelScope.launch {
+            val repo = getRepo() ?: return@launch
+            repo.getPrFiles(owner, repoName, prNumber).getOrNull()?.let { files ->
+                _prState.update { it.copy(prFiles = it.prFiles + (prNumber to files)) }
+            }
         }
     }
 }

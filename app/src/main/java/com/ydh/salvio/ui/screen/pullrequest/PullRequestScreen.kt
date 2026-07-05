@@ -22,6 +22,7 @@ import coil.compose.AsyncImage
 import com.ydh.salvio.data.model.CheckRunsResponse
 import com.ydh.salvio.data.model.GitHubPrReview
 import com.ydh.salvio.data.model.GitHubPullRequest
+import com.ydh.salvio.data.model.PullRequestFile
 import com.ydh.salvio.ui.theme.*
 import com.ydh.salvio.viewmodel.DashboardViewModel
 import java.time.Instant
@@ -39,6 +40,7 @@ fun PullRequestScreen(
     val state by dashboardViewModel.prState.collectAsState()
     var selectedTab by remember { mutableIntStateOf(0) }
     val tabs = listOf("Open", "Merged", "Closed")
+    var expandedPrNumber by remember { mutableStateOf<Int?>(null) }
 
     LaunchedEffect(owner, repoName) {
         dashboardViewModel.loadPullRequests(owner, repoName)
@@ -113,7 +115,19 @@ fun PullRequestScreen(
                                 pr = pr,
                                 state = prState,
                                 reviews = state.prReviews[pr.number] ?: emptyList(),
-                                checkRuns = state.prCheckRuns[pr.number]
+                                checkRuns = state.prCheckRuns[pr.number],
+                                files = state.prFiles[pr.number],
+                                isExpanded = expandedPrNumber == pr.number,
+                                onExpandToggle = {
+                                    if (expandedPrNumber == pr.number) {
+                                        expandedPrNumber = null
+                                    } else {
+                                        expandedPrNumber = pr.number
+                                        if (state.prFiles[pr.number] == null) {
+                                            dashboardViewModel.loadPrFiles(owner, repoName, pr.number)
+                                        }
+                                    }
+                                }
                             )
                         }
                     }
@@ -128,7 +142,10 @@ private fun PullRequestCard(
     pr: GitHubPullRequest,
     state: String,
     reviews: List<GitHubPrReview>,
-    checkRuns: CheckRunsResponse? = null
+    checkRuns: CheckRunsResponse? = null,
+    files: List<PullRequestFile>? = null,
+    isExpanded: Boolean = false,
+    onExpandToggle: () -> Unit = {}
 ) {
     val stateColor = when (state) {
         "open" -> GitHubGreen
@@ -204,10 +221,87 @@ private fun PullRequestCard(
                 BranchChip(label = pr.base.ref)
                 Spacer(modifier = Modifier.weight(1f))
                 pr.changedFiles?.let {
-                    Text(text = "$it 파일", fontSize = 12.sp, color = GitHubTextSecondary)
+                    TextButton(
+                        onClick = onExpandToggle,
+                        contentPadding = PaddingValues(0.dp)
+                    ) {
+                        Text(
+                            text = "$it 파일 ${if (isExpanded) "▲" else "▼"}",
+                            fontSize = 12.sp,
+                            color = GitHubBlue
+                        )
+                    }
+                }
+            }
+
+            if (isExpanded) {
+                Spacer(modifier = Modifier.height(8.dp))
+                HorizontalDivider(color = GitHubBorder, thickness = 0.5.dp)
+                Spacer(modifier = Modifier.height(8.dp))
+                if (files == null) {
+                    Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                    }
+                } else {
+                    files.take(20).forEach { file ->
+                        PrFileRow(file)
+                    }
+                    if (files.size > 20) {
+                        Text(
+                            text = "… 외 ${files.size - 20}개 파일",
+                            fontSize = 11.sp,
+                            color = GitHubTextSecondary,
+                            modifier = Modifier.padding(top = 4.dp)
+                        )
+                    }
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun PrFileRow(file: PullRequestFile) {
+    val statusColor = when (file.status) {
+        "added" -> GitHubGreen
+        "removed" -> GitHubRed
+        "renamed" -> GitHubYellow
+        else -> GitHubBlue
+    }
+    Row(
+        modifier = Modifier.padding(vertical = 2.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        Surface(shape = RoundedCornerShape(3.dp), color = statusColor.copy(alpha = 0.15f)) {
+            Text(
+                text = when (file.status) {
+                    "added" -> "A"
+                    "removed" -> "D"
+                    "renamed" -> "R"
+                    "modified" -> "M"
+                    else -> "?"
+                },
+                fontSize = 10.sp,
+                color = statusColor,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+            )
+        }
+        Text(
+            text = file.filename.substringAfterLast('/'),
+            fontSize = 12.sp,
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.weight(1f),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+        Text(
+            text = "+${file.additions} -${file.deletions}",
+            fontSize = 11.sp,
+            color = GitHubTextSecondary,
+            fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
+        )
     }
 }
 

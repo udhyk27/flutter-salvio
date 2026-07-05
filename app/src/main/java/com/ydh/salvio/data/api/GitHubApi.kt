@@ -100,4 +100,41 @@ interface GitHubApi {
         @Path("repo") repo: String,
         @Path("ref") ref: String
     ): CheckRunsResponse
+
+    @GET("repos/{owner}/{repo}/pulls/{pull_number}/files")
+    suspend fun getPrFiles(
+        @Path("owner") owner: String,
+        @Path("repo") repo: String,
+        @Path("pull_number") pullNumber: Int,
+        @Query("per_page") perPage: Int = 100
+    ): List<PullRequestFile>
+
+    @GET("repos/{owner}/{repo}/traffic/views")
+    suspend fun getTrafficViews(
+        @Path("owner") owner: String,
+        @Path("repo") repo: String
+    ): TrafficViews
+
+    @GET("repos/{owner}/{repo}/traffic/clones")
+    suspend fun getTrafficClones(
+        @Path("owner") owner: String,
+        @Path("repo") repo: String
+    ): TrafficClones
+
+    @GET("repos/{owner}/{repo}/stats/contributors")
+    suspend fun getContributorStats(
+        @Path("owner") owner: String,
+        @Path("repo") repo: String
+    ): List<ContributorWeeklyStats>
+
+    @GET("notifications")
+    suspend fun getNotifications(
+        @Query("all") all: Boolean = false,
+        @Query("per_page") perPage: Int = 50
+    ): List<GitHubNotification>
+
+    @PATCH("notifications/threads/{thread_id}")
+    suspend fun markNotificationRead(
+        @Path("thread_id") threadId: String
+    ): retrofit2.Response<Unit>
 }

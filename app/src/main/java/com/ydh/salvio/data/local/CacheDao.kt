@@ -91,4 +91,32 @@ interface CacheDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertCheckRuns(checkRuns: CachedCheckRuns)
+
+    // PR Files
+    @Query("SELECT * FROM cached_pr_files WHERE repoFullName = :repoFullName AND prNumber = :prNumber")
+    suspend fun getPrFiles(repoFullName: String, prNumber: Int): CachedPrFiles?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertPrFiles(prFiles: CachedPrFiles)
+
+    // Traffic Views
+    @Query("SELECT * FROM cached_traffic_views WHERE repoFullName = :repoFullName")
+    suspend fun getTrafficViews(repoFullName: String): CachedTrafficViews?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertTrafficViews(traffic: CachedTrafficViews)
+
+    // Traffic Clones
+    @Query("SELECT * FROM cached_traffic_clones WHERE repoFullName = :repoFullName")
+    suspend fun getTrafficClones(repoFullName: String): CachedTrafficClones?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertTrafficClones(traffic: CachedTrafficClones)
+
+    // Contributor Stats
+    @Query("SELECT * FROM cached_contributor_stats WHERE repoFullName = :repoFullName")
+    suspend fun getContributorStats(repoFullName: String): CachedContributorStats?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertContributorStats(stats: CachedContributorStats)
 }

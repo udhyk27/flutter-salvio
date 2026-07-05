@@ -41,7 +41,8 @@ fun RepoListScreen(
     authViewModel: AuthViewModel,
     repoViewModel: RepoViewModel,
     onRepoSelected: (owner: String, repo: String) -> Unit,
-    onLogout: () -> Unit
+    onLogout: () -> Unit,
+    onNavigateToNotifications: () -> Unit = {}
 ) {
     val authState by authViewModel.authState.collectAsState()
     val repoState by repoViewModel.repoListState.collectAsState()
@@ -63,6 +64,13 @@ fun RepoListScreen(
             TopAppBar(
                 title = { Text("Repository", fontWeight = FontWeight.Bold) },
                 actions = {
+                    IconButton(onClick = onNavigateToNotifications) {
+                        Icon(
+                            Icons.Outlined.Notifications,
+                            contentDescription = "알림",
+                            tint = GitHubTextSecondary
+                        )
+                    }
                     IconButton(onClick = { showFavoritesOnly = !showFavoritesOnly }) {
                         Icon(
                             if (showFavoritesOnly) Icons.Default.Star else Icons.Outlined.Star,
