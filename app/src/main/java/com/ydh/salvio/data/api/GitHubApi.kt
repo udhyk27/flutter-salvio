@@ -137,4 +137,10 @@ interface GitHubApi {
     suspend fun markNotificationRead(
         @Path("thread_id") threadId: String
     ): retrofit2.Response<Unit>
+
+    @GET("search/code")
+    suspend fun searchCode(
+        @Query("q") query: String,
+        @Query("per_page") perPage: Int = 30
+    ): CodeSearchResponse
 }

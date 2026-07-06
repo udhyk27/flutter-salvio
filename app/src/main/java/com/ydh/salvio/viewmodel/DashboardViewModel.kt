@@ -37,6 +37,13 @@ data class PrUiState(
     val error: String? = null
 )
 
+data class SearchUiState(
+    val isLoading: Boolean = false,
+    val results: com.ydh.salvio.data.model.CodeSearchResponse? = null,
+    val query: String = "",
+    val error: String? = null
+)
+
 data class IssueUiState(
     val isLoading: Boolean = false,
     val openIssues: List<GitHubIssue> = emptyList(),
@@ -97,6 +104,9 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
 
     private val _issueState = MutableStateFlow(IssueUiState())
     val issueState: StateFlow<IssueUiState> = _issueState.asStateFlow()
+
+    private val _searchState = MutableStateFlow(SearchUiState())
+    val searchState: StateFlow<SearchUiState> = _searchState.asStateFlow()
 
     private val _releaseState = MutableStateFlow(ReleaseUiState())
     val releaseState: StateFlow<ReleaseUiState> = _releaseState.asStateFlow()
@@ -269,6 +279,29 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
                 error = contributors.await().exceptionOrNull()?.message
             )
         }
+    }
+
+    fun searchCode(owner: String, repoName: String, query: String) {
+        if (query.isBlank()) return
+        viewModelScope.launch {
+            _searchState.value = SearchUiState(isLoading = true, query = query)
+            val repo = getRepo() ?: return@launch
+            repo.searchCode(owner, repoName, query).fold(
+                onSuccess = { _searchState.value = SearchUiState(results = it, query = query) },
+                onFailure = {
+                    val msg = when {
+                        it.message?.contains("403") == true -> "검색 권한이 없습니다."
+                        it.message?.contains("422") == true -> "검색어를 다시 확인해주세요."
+                        else -> "검색에 실패했습니다."
+                    }
+                    _searchState.value = SearchUiState(error = msg, query = query)
+                }
+            )
+        }
+    }
+
+    fun clearSearch() {
+        _searchState.value = SearchUiState()
     }
 
     fun loadPrFiles(owner: String, repoName: String, prNumber: Int) {

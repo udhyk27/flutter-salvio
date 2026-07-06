@@ -262,6 +262,20 @@ data class CheckRunsResponse(
     @SerializedName("check_runs") val checkRuns: List<CheckRun>
 )
 
+data class CodeSearchItem(
+    val name: String,
+    val path: String,
+    val sha: String,
+    @SerializedName("html_url") val htmlUrl: String,
+    val repository: NotificationRepo
+)
+
+data class CodeSearchResponse(
+    @SerializedName("total_count") val totalCount: Int,
+    @SerializedName("incomplete_results") val incompleteResults: Boolean,
+    val items: List<CodeSearchItem>
+)
+
 data class GitHubRepoStats(
     val repoFullName: String,
     val commitCount: Int,

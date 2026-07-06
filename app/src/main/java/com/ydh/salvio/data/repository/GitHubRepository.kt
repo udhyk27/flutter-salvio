@@ -182,6 +182,10 @@ class GitHubRepository(
         api.getNotifications()
     }
 
+    suspend fun searchCode(owner: String, repo: String, query: String): Result<CodeSearchResponse> = runCatching {
+        api.searchCode("$query+repo:$owner/$repo")
+    }
+
     suspend fun markNotificationRead(threadId: String): Result<Unit> = runCatching {
         api.markNotificationRead(threadId)
         Unit
