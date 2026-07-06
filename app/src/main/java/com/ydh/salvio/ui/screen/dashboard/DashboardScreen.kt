@@ -41,6 +41,7 @@ fun DashboardScreen(
     onNavigateToCommit: (sha: String) -> Unit,
     onNavigateToIssues: () -> Unit,
     onNavigateToReleases: () -> Unit,
+    onNavigateToSearch: () -> Unit,
     onBack: () -> Unit
 ) {
     val state by dashboardViewModel.dashboardState.collectAsState()
@@ -64,6 +65,9 @@ fun DashboardScreen(
                     }
                 },
                 actions = {
+                    IconButton(onClick = onNavigateToSearch) {
+                        Icon(Icons.Default.Search, contentDescription = "코드 검색")
+                    }
                     IconButton(onClick = { dashboardViewModel.loadDashboard(owner, repoName) }) {
                         Icon(Icons.Default.Refresh, contentDescription = "새로고침")
                     }

@@ -15,6 +15,7 @@ import com.ydh.salvio.ui.screen.dashboard.DashboardScreen
 import com.ydh.salvio.ui.screen.issue.IssueScreen
 import com.ydh.salvio.ui.screen.login.LoginScreen
 import com.ydh.salvio.ui.screen.notification.NotificationScreen
+import com.ydh.salvio.ui.screen.search.SearchScreen
 import com.ydh.salvio.ui.screen.pullrequest.PullRequestScreen
 import com.ydh.salvio.ui.screen.release.ReleaseScreen
 import com.ydh.salvio.ui.screen.repos.RepoListScreen
@@ -36,6 +37,9 @@ object Routes {
     const val ISSUES = "issues/{owner}/{repo}"
     const val RELEASES = "releases/{owner}/{repo}"
     const val NOTIFICATIONS = "notifications"
+    const val SEARCH = "search/{owner}/{repo}"
+
+    fun search(owner: String, repo: String) = "search/$owner/$repo"
 
     fun dashboard(owner: String, repo: String) = "dashboard/$owner/$repo"
     fun pullRequests(owner: String, repo: String) = "pullrequests/$owner/$repo"
@@ -110,6 +114,7 @@ fun SalvioNavGraph() {
                 onNavigateToCommit = { sha -> navController.navigate(Routes.commitDetail(owner, repo, sha)) },
                 onNavigateToIssues = { navController.navigate(Routes.issues(owner, repo)) },
                 onNavigateToReleases = { navController.navigate(Routes.releases(owner, repo)) },
+                onNavigateToSearch = { navController.navigate(Routes.search(owner, repo)) },
                 onBack = { navController.popBackStack() }
             )
         }
@@ -156,6 +161,22 @@ fun SalvioNavGraph() {
             val owner = back.arguments?.getString("owner") ?: ""
             val repo = back.arguments?.getString("repo") ?: ""
             StatsScreen(
+                owner = owner, repoName = repo,
+                dashboardViewModel = dashboardViewModel,
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(
+            Routes.SEARCH,
+            arguments = listOf(
+                navArgument("owner") { type = NavType.StringType },
+                navArgument("repo") { type = NavType.StringType }
+            )
+        ) { back ->
+            val owner = back.arguments?.getString("owner") ?: ""
+            val repo = back.arguments?.getString("repo") ?: ""
+            SearchScreen(
                 owner = owner, repoName = repo,
                 dashboardViewModel = dashboardViewModel,
                 onBack = { navController.popBackStack() }
