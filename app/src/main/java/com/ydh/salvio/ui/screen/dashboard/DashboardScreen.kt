@@ -11,6 +11,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -77,7 +78,8 @@ fun DashboardScreen(
         },
         containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->
-        if (state.isLoading) {
+        // 첫 로드: 풀스크린 스피너
+        if (state.isLoading && state.stats == null) {
             Box(
                 modifier = Modifier.fillMaxSize().padding(paddingValues),
                 contentAlignment = Alignment.Center
@@ -85,16 +87,58 @@ fun DashboardScreen(
             return@Scaffold
         }
 
-        LazyColumn(
-            modifier = Modifier.padding(paddingValues),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+        // 첫 로드 실패: 에러 화면
+        if (state.error != null && state.stats == null) {
+            Box(
+                modifier = Modifier.fillMaxSize().padding(paddingValues),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Icon(Icons.Default.ErrorOutline, contentDescription = null, tint = GitHubRed, modifier = Modifier.size(48.dp))
+                    Text("데이터를 불러오지 못했습니다.", color = GitHubTextSecondary)
+                    Button(onClick = { dashboardViewModel.loadDashboard(owner, repoName) }) { Text("다시 시도") }
+                }
+            }
+            return@Scaffold
+        }
+
+        PullToRefreshBox(
+            isRefreshing = state.isLoading,
+            onRefresh = { dashboardViewModel.loadDashboard(owner, repoName) },
+            modifier = Modifier.padding(paddingValues)
         ) {
-            item { StatsRow(state, onNavigateToPRs, onNavigateToBranches) }
-            item { QuickActionsRow(onNavigateToPRs, onNavigateToBranches, onNavigateToStats, onNavigateToIssues, onNavigateToReleases) }
-            item { RecentCommitsSection(state.recentCommits, onNavigateToCommit) }
-            item { OpenPRsSection(state, onNavigateToPRs) }
-            item { ContributorsSection(state) }
+            LazyColumn(
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                // 갱신 중 에러 배너
+                if (state.error != null && state.stats != null) {
+                    item {
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = GitHubRed.copy(alpha = 0.1f),
+                            border = BorderStroke(1.dp, GitHubRed.copy(alpha = 0.3f))
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(12.dp),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(Icons.Default.ErrorOutline, contentDescription = null, tint = GitHubRed, modifier = Modifier.size(16.dp))
+                                Text("일부 데이터를 불러오지 못했습니다.", fontSize = 13.sp, color = GitHubRed, modifier = Modifier.weight(1f))
+                            }
+                        }
+                    }
+                }
+                item { StatsRow(state, onNavigateToPRs, onNavigateToBranches) }
+                item { QuickActionsRow(onNavigateToPRs, onNavigateToBranches, onNavigateToStats, onNavigateToIssues, onNavigateToReleases) }
+                item { RecentCommitsSection(state.recentCommits, onNavigateToCommit) }
+                item { OpenPRsSection(state, onNavigateToPRs) }
+                item { ContributorsSection(state) }
+            }
         }
     }
 }
@@ -279,7 +323,9 @@ private fun OpenPRsSection(state: DashboardUiState, onNavigateToPRs: () -> Unit)
         } else {
             state.openPrs.forEach { pr ->
                 Row(
-                    modifier = Modifier.padding(vertical = 6.dp),
+                    modifier = Modifier
+                        .clickable { onNavigateToPRs() }
+                        .padding(vertical = 6.dp),
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -288,6 +334,7 @@ private fun OpenPRsSection(state: DashboardUiState, onNavigateToPRs: () -> Unit)
                         Text(text = pr.title, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         Text(text = "#${pr.number} • ${pr.user.login}", fontSize = 11.sp, color = GitHubTextSecondary)
                     }
+                    Icon(Icons.Default.ChevronRight, contentDescription = null, tint = GitHubTextSecondary, modifier = Modifier.size(16.dp))
                 }
                 if (pr != state.openPrs.last()) HorizontalDivider(color = GitHubBorder, thickness = 0.5.dp)
             }

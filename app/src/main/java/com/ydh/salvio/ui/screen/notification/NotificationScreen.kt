@@ -32,8 +32,26 @@ fun NotificationScreen(
 ) {
     val state by notificationViewModel.state.collectAsState()
     val unreadCount = state.notifications.count { it.unread }
+    var showMarkAllDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) { notificationViewModel.load() }
+
+    if (showMarkAllDialog) {
+        AlertDialog(
+            onDismissRequest = { showMarkAllDialog = false },
+            title = { Text("모두 읽음 처리") },
+            text = { Text("${unreadCount}개의 알림을 모두 읽음으로 처리하시겠습니까?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showMarkAllDialog = false
+                    notificationViewModel.markAllRead()
+                }) { Text("확인") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showMarkAllDialog = false }) { Text("취소") }
+            }
+        )
+    }
 
     Scaffold(
         topBar = {
@@ -51,7 +69,7 @@ fun NotificationScreen(
                 },
                 actions = {
                     if (unreadCount > 0) {
-                        IconButton(onClick = { notificationViewModel.markAllRead() }) {
+                        IconButton(onClick = { showMarkAllDialog = true }) {
                             Icon(Icons.Default.DoneAll, contentDescription = "모두 읽음", tint = GitHubBlue)
                         }
                     }
@@ -73,7 +91,16 @@ fun NotificationScreen(
             state.error != null -> Box(
                 modifier = Modifier.fillMaxSize().padding(paddingValues),
                 contentAlignment = Alignment.Center
-            ) { Text("알림을 불러오지 못했습니다.", color = GitHubTextSecondary) }
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Icon(Icons.Default.ErrorOutline, contentDescription = null, tint = GitHubRed, modifier = Modifier.size(48.dp))
+                    Text("알림을 불러오지 못했습니다.", color = GitHubTextSecondary)
+                    Button(onClick = { notificationViewModel.load() }) { Text("다시 시도") }
+                }
+            }
 
             state.notifications.isEmpty() -> Box(
                 modifier = Modifier.fillMaxSize().padding(paddingValues),

@@ -1,6 +1,9 @@
 package com.ydh.salvio.ui.screen.branch
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -8,9 +11,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -32,6 +37,7 @@ fun BranchScreen(
     onBack: () -> Unit
 ) {
     val state by dashboardViewModel.branchState.collectAsState()
+    val context = LocalContext.current
 
     LaunchedEffect(owner, repoName) {
         dashboardViewModel.loadBranches(owner, repoName)
@@ -54,39 +60,67 @@ fun BranchScreen(
         },
         containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->
-        if (state.isLoading) {
-            Box(
-                modifier = Modifier.fillMaxSize().padding(paddingValues),
-                contentAlignment = Alignment.Center
-            ) { CircularProgressIndicator() }
-            return@Scaffold
-        }
-
-        LazyColumn(
-            modifier = Modifier.padding(paddingValues),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            item {
-                Text(
-                    text = "${state.branches.size}개 브랜치",
-                    fontSize = 13.sp,
-                    color = GitHubTextSecondary,
-                    modifier = Modifier.padding(bottom = 4.dp)
-                )
+        when {
+            state.isLoading && state.branches.isEmpty() -> {
+                Box(
+                    modifier = Modifier.fillMaxSize().padding(paddingValues),
+                    contentAlignment = Alignment.Center
+                ) { CircularProgressIndicator() }
             }
-            items(state.branches) { branch ->
-                BranchCard(
-                    branch = branch,
-                    latestCommit = state.branchCommits[branch.name]
-                )
+            state.error != null && state.branches.isEmpty() -> {
+                Box(
+                    modifier = Modifier.fillMaxSize().padding(paddingValues),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Icon(Icons.Default.ErrorOutline, contentDescription = null, tint = GitHubRed, modifier = Modifier.size(48.dp))
+                        Text("브랜치 목록을 불러오지 못했습니다.", color = GitHubTextSecondary)
+                        Button(onClick = { dashboardViewModel.loadBranches(owner, repoName) }) { Text("다시 시도") }
+                    }
+                }
+            }
+            else -> {
+                PullToRefreshBox(
+                    isRefreshing = state.isLoading,
+                    onRefresh = { dashboardViewModel.loadBranches(owner, repoName) },
+                    modifier = Modifier.padding(paddingValues)
+                ) {
+                    LazyColumn(
+                        contentPadding = PaddingValues(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        item {
+                            Text(
+                                text = "${state.branches.size}개 브랜치",
+                                fontSize = 13.sp,
+                                color = GitHubTextSecondary,
+                                modifier = Modifier.padding(bottom = 4.dp)
+                            )
+                        }
+                        items(state.branches) { branch ->
+                            BranchCard(
+                                branch = branch,
+                                latestCommit = state.branchCommits[branch.name],
+                                onClick = {
+                                    val url = "https://github.com/$owner/$repoName/tree/${branch.name}"
+                                    try {
+                                        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                                    } catch (_: Exception) {}
+                                }
+                            )
+                        }
+                    }
+                }
             }
         }
     }
 }
 
 @Composable
-private fun BranchCard(branch: GitHubBranch, latestCommit: GitHubCommit?) {
+private fun BranchCard(branch: GitHubBranch, latestCommit: GitHubCommit?, onClick: () -> Unit) {
     val commitDate = latestCommit?.commit?.author?.date
     val isStale = commitDate?.let {
         try {
@@ -96,7 +130,7 @@ private fun BranchCard(branch: GitHubBranch, latestCommit: GitHubCommit?) {
     } ?: false
 
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().clickable { onClick() },
         shape = RoundedCornerShape(10.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, if (isStale) GitHubYellow.copy(alpha = 0.5f) else GitHubBorder)
@@ -175,6 +209,12 @@ private fun BranchCard(branch: GitHubBranch, latestCommit: GitHubCommit?) {
                 fontSize = 11.sp,
                 color = MaterialTheme.colorScheme.primary,
                 fontFamily = FontFamily.Monospace
+            )
+            Icon(
+                Icons.Default.OpenInNew,
+                contentDescription = null,
+                tint = GitHubTextSecondary,
+                modifier = Modifier.size(14.dp)
             )
         }
     }

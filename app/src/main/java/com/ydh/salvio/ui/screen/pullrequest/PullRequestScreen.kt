@@ -9,6 +9,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -70,65 +71,93 @@ fun PullRequestScreen(
                 contentColor = MaterialTheme.colorScheme.primary
             ) {
                 tabs.forEachIndexed { index, title ->
-                    val count = when (index) {
-                        0 -> state.openPrs.size
-                        1 -> state.mergedPrs.size
-                        2 -> state.closedPrs.size
-                        else -> 0
+                    val count = when {
+                        state.isLoading -> null
+                        else -> when (index) {
+                            0 -> state.openPrs.size
+                            1 -> state.mergedPrs.size
+                            2 -> state.closedPrs.size
+                            else -> 0
+                        }
                     }
                     Tab(
                         selected = selectedTab == index,
                         onClick = { selectedTab = index },
-                        text = { Text("$title ($count)", fontSize = 13.sp) }
+                        text = {
+                            Text(
+                                if (count != null) "$title ($count)" else title,
+                                fontSize = 13.sp
+                            )
+                        }
                     )
                 }
             }
 
-            if (state.isLoading) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
-                }
-            } else {
-                val prs = when (selectedTab) {
-                    0 -> state.openPrs
-                    1 -> state.mergedPrs
-                    2 -> state.closedPrs
-                    else -> emptyList()
-                }
-                val prState = when (selectedTab) {
-                    0 -> "open"
-                    1 -> "merged"
-                    else -> "closed"
-                }
-
-                if (prs.isEmpty()) {
+            when {
+                state.isLoading && state.openPrs.isEmpty() -> {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text("${tabs[selectedTab]} PR이 없습니다.", color = GitHubTextSecondary)
+                        CircularProgressIndicator()
                     }
-                } else {
-                    LazyColumn(
-                        contentPadding = PaddingValues(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                }
+                state.error != null && state.openPrs.isEmpty() && state.mergedPrs.isEmpty() && state.closedPrs.isEmpty() -> {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Icon(Icons.Default.ErrorOutline, contentDescription = null, tint = GitHubRed, modifier = Modifier.size(48.dp))
+                            Text("PR 목록을 불러오지 못했습니다.", color = GitHubTextSecondary)
+                            Button(onClick = { dashboardViewModel.loadPullRequests(owner, repoName) }) { Text("다시 시도") }
+                        }
+                    }
+                }
+                else -> {
+                    val prs = when (selectedTab) {
+                        0 -> state.openPrs
+                        1 -> state.mergedPrs
+                        2 -> state.closedPrs
+                        else -> emptyList()
+                    }
+                    val prState = when (selectedTab) {
+                        0 -> "open"
+                        1 -> "merged"
+                        else -> "closed"
+                    }
+
+                    PullToRefreshBox(
+                        isRefreshing = state.isLoading,
+                        onRefresh = { dashboardViewModel.loadPullRequests(owner, repoName) }
                     ) {
-                        items(prs) { pr ->
-                            PullRequestCard(
-                                pr = pr,
-                                state = prState,
-                                reviews = state.prReviews[pr.number] ?: emptyList(),
-                                checkRuns = state.prCheckRuns[pr.number],
-                                files = state.prFiles[pr.number],
-                                isExpanded = expandedPrNumber == pr.number,
-                                onExpandToggle = {
-                                    if (expandedPrNumber == pr.number) {
-                                        expandedPrNumber = null
-                                    } else {
-                                        expandedPrNumber = pr.number
-                                        if (state.prFiles[pr.number] == null) {
-                                            dashboardViewModel.loadPrFiles(owner, repoName, pr.number)
+                        if (prs.isEmpty()) {
+                            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                Text("${tabs[selectedTab]} PR이 없습니다.", color = GitHubTextSecondary)
+                            }
+                        } else {
+                            LazyColumn(
+                                contentPadding = PaddingValues(16.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                items(prs) { pr ->
+                                    PullRequestCard(
+                                        pr = pr,
+                                        state = prState,
+                                        reviews = state.prReviews[pr.number] ?: emptyList(),
+                                        checkRuns = state.prCheckRuns[pr.number],
+                                        files = state.prFiles[pr.number],
+                                        isExpanded = expandedPrNumber == pr.number,
+                                        onExpandToggle = {
+                                            if (expandedPrNumber == pr.number) {
+                                                expandedPrNumber = null
+                                            } else {
+                                                expandedPrNumber = pr.number
+                                                if (state.prFiles[pr.number] == null) {
+                                                    dashboardViewModel.loadPrFiles(owner, repoName, pr.number)
+                                                }
+                                            }
                                         }
-                                    }
+                                    )
                                 }
-                            )
+                            }
                         }
                     }
                 }
@@ -357,7 +386,6 @@ private fun BranchChip(label: String) {
 private fun summarizeReviews(reviews: List<GitHubPrReview>): List<Pair<String, Color>> {
     if (reviews.isEmpty()) return emptyList()
 
-    // 리뷰어별 최신 상태만 반영
     val latestByReviewer = reviews
         .filter { it.state != "COMMENTED" && it.state != "DISMISSED" }
         .groupBy { it.user.login }

@@ -1,6 +1,9 @@
 package com.ydh.salvio.ui.screen.issue
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -9,11 +12,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -37,6 +42,7 @@ fun IssueScreen(
 ) {
     val state by dashboardViewModel.issueState.collectAsState()
     var selectedTab by remember { mutableIntStateOf(0) }
+    val context = LocalContext.current
 
     LaunchedEffect(owner, repoName) {
         dashboardViewModel.loadIssues(owner, repoName)
@@ -70,31 +76,64 @@ fun IssueScreen(
                         Tab(
                             selected = selectedTab == index,
                             onClick = { selectedTab = index },
-                            text = { Text("$label ($count)", fontSize = 13.sp) }
+                            text = {
+                                Text(
+                                    if (state.isLoading) label else "$label ($count)",
+                                    fontSize = 13.sp
+                                )
+                            }
                         )
                     }
             }
 
-            if (state.isLoading) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
-                }
-            } else {
-                val issues = if (selectedTab == 0) state.openIssues else state.closedIssues
-                if (issues.isEmpty()) {
+            when {
+                state.isLoading && state.openIssues.isEmpty() && state.closedIssues.isEmpty() -> {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text(
-                            if (selectedTab == 0) "열린 이슈가 없습니다." else "닫힌 이슈가 없습니다.",
-                            color = GitHubTextSecondary
-                        )
+                        CircularProgressIndicator()
                     }
-                } else {
-                    LazyColumn(
-                        contentPadding = PaddingValues(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                }
+                state.error != null && state.openIssues.isEmpty() && state.closedIssues.isEmpty() -> {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Icon(Icons.Default.ErrorOutline, contentDescription = null, tint = GitHubRed, modifier = Modifier.size(48.dp))
+                            Text("이슈 목록을 불러오지 못했습니다.", color = GitHubTextSecondary)
+                            Button(onClick = { dashboardViewModel.loadIssues(owner, repoName) }) { Text("다시 시도") }
+                        }
+                    }
+                }
+                else -> {
+                    val issues = if (selectedTab == 0) state.openIssues else state.closedIssues
+
+                    PullToRefreshBox(
+                        isRefreshing = state.isLoading,
+                        onRefresh = { dashboardViewModel.loadIssues(owner, repoName) }
                     ) {
-                        items(issues) { issue ->
-                            IssueCard(issue = issue)
+                        if (issues.isEmpty()) {
+                            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                Text(
+                                    if (selectedTab == 0) "열린 이슈가 없습니다." else "닫힌 이슈가 없습니다.",
+                                    color = GitHubTextSecondary
+                                )
+                            }
+                        } else {
+                            LazyColumn(
+                                contentPadding = PaddingValues(16.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                items(issues) { issue ->
+                                    IssueCard(
+                                        issue = issue,
+                                        onClick = {
+                                            try {
+                                                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(issue.htmlUrl)))
+                                            } catch (_: Exception) {}
+                                        }
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -104,9 +143,9 @@ fun IssueScreen(
 }
 
 @Composable
-private fun IssueCard(issue: GitHubIssue) {
+private fun IssueCard(issue: GitHubIssue, onClick: () -> Unit) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().clickable { onClick() },
         shape = RoundedCornerShape(10.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, GitHubBorder)
@@ -150,6 +189,7 @@ private fun IssueCard(issue: GitHubIssue) {
                         )
                     }
                 }
+                Icon(Icons.Default.OpenInNew, contentDescription = null, tint = GitHubTextSecondary, modifier = Modifier.size(14.dp))
             }
 
             if (issue.labels.isNotEmpty()) {

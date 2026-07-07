@@ -1,6 +1,9 @@
 package com.ydh.salvio.ui.screen.release
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -9,11 +12,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -36,6 +41,7 @@ fun ReleaseScreen(
     onBack: () -> Unit
 ) {
     val state by dashboardViewModel.releaseState.collectAsState()
+    val context = LocalContext.current
 
     LaunchedEffect(owner, repoName) {
         dashboardViewModel.loadReleases(owner, repoName)
@@ -59,23 +65,50 @@ fun ReleaseScreen(
         containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->
         when {
-            state.isLoading -> Box(
+            state.isLoading && state.releases.isEmpty() -> Box(
                 modifier = Modifier.fillMaxSize().padding(paddingValues),
                 contentAlignment = Alignment.Center
             ) { CircularProgressIndicator() }
 
-            state.releases.isEmpty() -> Box(
+            state.error != null && state.releases.isEmpty() -> Box(
                 modifier = Modifier.fillMaxSize().padding(paddingValues),
                 contentAlignment = Alignment.Center
-            ) { Text("릴리즈가 없습니다.", color = GitHubTextSecondary) }
-
-            else -> LazyColumn(
-                modifier = Modifier.padding(paddingValues),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                items(state.releases) { release ->
-                    ReleaseCard(release = release)
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Icon(Icons.Default.ErrorOutline, contentDescription = null, tint = GitHubRed, modifier = Modifier.size(48.dp))
+                    Text("릴리즈 목록을 불러오지 못했습니다.", color = GitHubTextSecondary)
+                    Button(onClick = { dashboardViewModel.loadReleases(owner, repoName) }) { Text("다시 시도") }
+                }
+            }
+
+            else -> PullToRefreshBox(
+                isRefreshing = state.isLoading,
+                onRefresh = { dashboardViewModel.loadReleases(owner, repoName) },
+                modifier = Modifier.padding(paddingValues)
+            ) {
+                if (state.releases.isEmpty()) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text("릴리즈가 없습니다.", color = GitHubTextSecondary)
+                    }
+                } else {
+                    LazyColumn(
+                        contentPadding = PaddingValues(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(state.releases) { release ->
+                            ReleaseCard(
+                                release = release,
+                                onClick = {
+                                    try {
+                                        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(release.htmlUrl)))
+                                    } catch (_: Exception) {}
+                                }
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -83,9 +116,9 @@ fun ReleaseScreen(
 }
 
 @Composable
-private fun ReleaseCard(release: GitHubRelease) {
+private fun ReleaseCard(release: GitHubRelease, onClick: () -> Unit) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().clickable { onClick() },
         shape = RoundedCornerShape(10.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, GitHubBorder)
@@ -115,6 +148,7 @@ private fun ReleaseCard(release: GitHubRelease) {
                 if (release.draft) {
                     ReleaseBadge(label = "Draft", color = GitHubTextSecondary)
                 }
+                Icon(Icons.Default.OpenInNew, contentDescription = null, tint = GitHubTextSecondary, modifier = Modifier.size(14.dp))
             }
 
             release.name?.takeIf { it.isNotBlank() && it != release.tagName }?.let { name ->
@@ -148,11 +182,12 @@ private fun ReleaseCard(release: GitHubRelease) {
             }
 
             release.body?.takeIf { it.isNotBlank() }?.let { body ->
+                val cleanBody = body.replace(Regex("#{1,6}\\s"), "").replace("**", "").replace("*", "").trim()
                 Spacer(modifier = Modifier.height(10.dp))
                 HorizontalDivider(color = GitHubBorder, thickness = 0.5.dp)
                 Spacer(modifier = Modifier.height(10.dp))
                 Text(
-                    text = body.lines().take(4).joinToString("\n"),
+                    text = cleanBody.lines().take(4).joinToString("\n"),
                     fontSize = 12.sp,
                     color = GitHubTextSecondary,
                     lineHeight = 18.sp,

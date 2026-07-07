@@ -74,7 +74,14 @@ fun CommitDetailScreen(
             }
             state.error != null -> {
                 Box(modifier = Modifier.fillMaxSize().padding(paddingValues), contentAlignment = Alignment.Center) {
-                    Text(state.error!!, color = MaterialTheme.colorScheme.error)
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Icon(Icons.Default.ErrorOutline, contentDescription = null, tint = GitHubRed, modifier = Modifier.size(48.dp))
+                        Text("커밋 정보를 불러오지 못했습니다.", color = GitHubTextSecondary)
+                        Button(onClick = { dashboardViewModel.loadCommitDetail(owner, repoName, sha) }) { Text("다시 시도") }
+                    }
                 }
             }
             state.detail != null -> {

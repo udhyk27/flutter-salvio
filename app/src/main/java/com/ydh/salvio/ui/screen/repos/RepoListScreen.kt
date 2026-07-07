@@ -52,12 +52,37 @@ fun RepoListScreen(
 
     var searchQuery by remember { mutableStateOf("") }
     var showFavoritesOnly by remember { mutableStateOf(false) }
+    var showLogoutDialog by remember { mutableStateOf(false) }
+    var pendingWatchRepoName by remember { mutableStateOf<String?>(null) }
 
     val notificationPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
-    ) { /* 권한 결과 처리 불필요 */ }
+    ) { granted ->
+        if (granted) {
+            pendingWatchRepoName?.let { repoViewModel.toggleWatch(it) }
+        }
+        pendingWatchRepoName = null
+    }
 
     LaunchedEffect(Unit) { repoViewModel.loadRepos() }
+
+    if (showLogoutDialog) {
+        AlertDialog(
+            onDismissRequest = { showLogoutDialog = false },
+            title = { Text("로그아웃") },
+            text = { Text("정말 로그아웃 하시겠습니까?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showLogoutDialog = false
+                    authViewModel.logout()
+                    onLogout()
+                }) { Text("로그아웃", color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showLogoutDialog = false }) { Text("취소") }
+            }
+        )
+    }
 
     Scaffold(
         topBar = {
@@ -88,10 +113,10 @@ fun RepoListScreen(
                             modifier = Modifier
                                 .size(36.dp)
                                 .clip(CircleShape)
-                                .clickable { authViewModel.logout(); onLogout() }
+                                .clickable { showLogoutDialog = true }
                                 .padding(end = 8.dp)
                         )
-                    } ?: IconButton(onClick = { authViewModel.logout(); onLogout() }) {
+                    } ?: IconButton(onClick = { showLogoutDialog = true }) {
                         Icon(Icons.Outlined.AccountCircle, contentDescription = "로그아웃")
                     }
                 },
@@ -183,10 +208,14 @@ fun RepoListScreen(
                                 isWatched = isWatched,
                                 onFavoriteToggle = { repoViewModel.toggleFavorite(repo.fullName) },
                                 onWatchToggle = {
-                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                    if (isWatched) {
+                                        repoViewModel.toggleWatch(repo.fullName)
+                                    } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                        pendingWatchRepoName = repo.fullName
                                         notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                                    } else {
+                                        repoViewModel.toggleWatch(repo.fullName)
                                     }
-                                    repoViewModel.toggleWatch(repo.fullName)
                                 },
                                 onClick = { onRepoSelected(repo.owner.login, repo.name) }
                             )
@@ -211,9 +240,7 @@ fun RepoCard(
     Card(
         modifier = Modifier.fillMaxWidth().clickable { onClick() },
         shape = RoundedCornerShape(10.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = if (isFavorite) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.surface
-        ),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, if (isFavorite) GitHubYellow.copy(alpha = 0.5f) else GitHubBorder)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -232,7 +259,6 @@ fun RepoCard(
                     overflow = TextOverflow.Ellipsis
                 )
 
-                // 알림 감시 아이콘
                 IconButton(onClick = onWatchToggle, modifier = Modifier.size(28.dp)) {
                     Icon(
                         imageVector = if (isWatched) Icons.Default.Notifications else Icons.Outlined.Notifications,
@@ -242,7 +268,6 @@ fun RepoCard(
                     )
                 }
 
-                // 즐겨찾기 아이콘
                 IconButton(onClick = onFavoriteToggle, modifier = Modifier.size(28.dp)) {
                     Icon(
                         imageVector = if (isFavorite) Icons.Default.Star else Icons.Outlined.Star,

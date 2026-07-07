@@ -163,11 +163,14 @@ fun SearchScreen(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = "${results.totalCount}개 결과",
+                                    text = if (results.totalCount > results.items.size)
+                                        "${results.totalCount}개 중 ${results.items.size}개 표시"
+                                    else
+                                        "${results.totalCount}개 결과",
                                     fontSize = 12.sp,
                                     color = GitHubTextSecondary
                                 )
-                                if (results.incompleteResults) {
+                                if (results.incompleteResults || results.totalCount > results.items.size) {
                                     Spacer(modifier = Modifier.width(8.dp))
                                     Surface(
                                         shape = RoundedCornerShape(4.dp),
@@ -218,7 +221,9 @@ private fun SearchResultCard(item: CodeSearchItem, query: String) {
         modifier = Modifier
             .fillMaxWidth()
             .clickable {
-                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(item.htmlUrl)))
+                try {
+                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(item.htmlUrl)))
+                } catch (_: Exception) {}
             },
         shape = RoundedCornerShape(10.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),

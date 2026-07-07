@@ -4,13 +4,13 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
 import com.ydh.salvio.data.model.CommitWeekActivity
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -26,7 +26,6 @@ import com.ydh.salvio.data.model.TrafficViews
 import com.ydh.salvio.ui.component.CommitActivityChart
 import com.ydh.salvio.ui.theme.*
 import com.ydh.salvio.viewmodel.DashboardViewModel
-import kotlin.math.max
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -59,40 +58,61 @@ fun StatsScreen(
         },
         containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->
-        if (state.isLoading) {
-            Box(modifier = Modifier.fillMaxSize().padding(paddingValues), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator()
-            }
-            return@Scaffold
-        }
-
-        LazyColumn(
-            modifier = Modifier.padding(paddingValues),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            item { CommitActivityCard(activity = state.commitActivity) }
-            if (state.trafficViews != null || state.trafficClones != null) {
-                item {
-                    TrafficCard(
-                        views = state.trafficViews,
-                        clones = state.trafficClones
-                    )
+        when {
+            state.isLoading && state.contributors.isEmpty() -> {
+                Box(modifier = Modifier.fillMaxSize().padding(paddingValues), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
                 }
             }
-            item {
-                ContributorRankingCard(
-                    contributors = state.contributors,
-                    weeklyStats = state.contributorWeeklyStats
-                )
+            state.error != null && state.contributors.isEmpty() -> {
+                Box(modifier = Modifier.fillMaxSize().padding(paddingValues), contentAlignment = Alignment.Center) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Icon(Icons.Default.ErrorOutline, contentDescription = null, tint = GitHubRed, modifier = Modifier.size(48.dp))
+                        Text("통계를 불러오지 못했습니다.", color = GitHubTextSecondary)
+                        Button(onClick = { dashboardViewModel.loadStats(owner, repoName) }) { Text("다시 시도") }
+                    }
+                }
             }
-            item {
-                RecentCommitAuthorsCard(
-                    commits = state.commits.groupBy { it.commit.author.name }
-                        .map { (name, commits) -> name to commits.size }
-                        .sortedByDescending { it.second }
-                        .take(10)
-                )
+            else -> {
+                PullToRefreshBox(
+                    isRefreshing = state.isLoading,
+                    onRefresh = { dashboardViewModel.loadStats(owner, repoName) },
+                    modifier = Modifier.padding(paddingValues)
+                ) {
+                    LazyColumn(
+                        contentPadding = PaddingValues(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        item { CommitActivityCard(activity = state.commitActivity) }
+                        if (state.trafficViews != null || state.trafficClones != null) {
+                            item {
+                                TrafficCard(
+                                    views = state.trafficViews,
+                                    clones = state.trafficClones
+                                )
+                            }
+                        } else if (state.trafficAccessDenied) {
+                            item { TrafficDeniedCard() }
+                        }
+                        item {
+                            ContributorRankingCard(
+                                contributors = state.contributors,
+                                weeklyStats = state.contributorWeeklyStats
+                            )
+                        }
+                        item {
+                            RecentCommitAuthorsCard(
+                                commits = state.commits.groupBy { it.commit.author.name }
+                                    .map { (name, commits) -> name to commits.size }
+                                    .sortedByDescending { it.second }
+                                    .take(10)
+                            )
+                        }
+                    }
+                }
             }
         }
     }
@@ -167,6 +187,28 @@ private fun TrafficCard(views: TrafficViews?, clones: TrafficClones?) {
 }
 
 @Composable
+private fun TrafficDeniedCard() {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(10.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, GitHubBorder)
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(Icons.Default.Lock, contentDescription = null, tint = GitHubTextSecondary, modifier = Modifier.size(18.dp))
+            Column {
+                Text("트래픽 통계 없음", fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+                Text("저장소 push 권한이 있어야 조회할 수 있습니다.", fontSize = 12.sp, color = GitHubTextSecondary)
+            }
+        }
+    }
+}
+
+@Composable
 private fun TrafficStatItem(
     modifier: Modifier = Modifier,
     icon: androidx.compose.ui.graphics.vector.ImageVector,
@@ -225,7 +267,7 @@ private fun ContributorRankingCard(
                         maxContributions = maxContributions,
                         weeklyStats = statsMap[contributor.login]
                     )
-                    if (index < contributors.size - 1) {
+                    if (index < contributors.take(10).size - 1) {
                         HorizontalDivider(color = GitHubBorder, thickness = 0.5.dp, modifier = Modifier.padding(vertical = 4.dp))
                     }
                 }

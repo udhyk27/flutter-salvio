@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <data-extraction-rules>
     <cloud-backup>
-        <exclude domain="datastore" path="salvio_prefs.preferences_pb"/>
+        <exclude domain="file" path="datastore/salvio_prefs.preferences_pb"/>
         <exclude domain="database" path="salvio_cache.db"/>
     </cloud-backup>
     <device-transfer>
-        <exclude domain="datastore" path="salvio_prefs.preferences_pb"/>
+        <exclude domain="file" path="datastore/salvio_prefs.preferences_pb"/>
         <exclude domain="database" path="salvio_cache.db"/>
     </device-transfer>
 </data-extraction-rules>
