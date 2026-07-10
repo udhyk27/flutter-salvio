@@ -2,7 +2,6 @@ package com.ydh.salvio.ui.screen.login
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Visibility
@@ -18,9 +17,11 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.ydh.salvio.ui.component.SalvioCard
 import com.ydh.salvio.ui.theme.GitHubBlue
-import com.ydh.salvio.ui.theme.GitHubBorder
 import com.ydh.salvio.ui.theme.GitHubTextSecondary
+import com.ydh.salvio.ui.theme.Radius
+import com.ydh.salvio.ui.theme.Spacing
 import com.ydh.salvio.viewmodel.AuthState
 import com.ydh.salvio.viewmodel.AuthViewModel
 
@@ -48,40 +49,33 @@ fun LoginScreen(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(32.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(24.dp)
+                .padding(Spacing.xxl),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
                 text = "Salvio",
-                fontSize = 40.sp,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
+                fontSize = 36.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onBackground
             )
-
+            Spacer(modifier = Modifier.height(Spacing.sm))
             Text(
                 text = "GitHub 프로젝트 모니터링",
-                fontSize = 16.sp,
+                style = MaterialTheme.typography.bodyMedium,
                 color = GitHubTextSecondary,
                 textAlign = TextAlign.Center
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(Spacing.xxl + Spacing.sm))
 
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                border = androidx.compose.foundation.BorderStroke(1.dp, GitHubBorder)
-            ) {
+            SalvioCard(modifier = Modifier.fillMaxWidth()) {
                 Column(
-                    modifier = Modifier.padding(24.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                    modifier = Modifier.padding(Spacing.xl),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.md)
                 ) {
                     Text(
-                        text = "GitHub Personal Access Token",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.SemiBold,
+                        text = "Personal Access Token",
+                        style = MaterialTheme.typography.titleSmall,
                         color = MaterialTheme.colorScheme.onSurface
                     )
 
@@ -103,17 +97,17 @@ fun LoginScreen(
                         modifier = Modifier.fillMaxWidth(),
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = GitHubBlue,
-                            unfocusedBorderColor = GitHubBorder
+                            unfocusedBorderColor = MaterialTheme.colorScheme.outline
                         ),
                         singleLine = true,
-                        shape = RoundedCornerShape(8.dp)
+                        shape = Radius.field
                     )
 
                     if (authState is AuthState.Error) {
                         Text(
                             text = (authState as AuthState.Error).message,
                             color = MaterialTheme.colorScheme.error,
-                            fontSize = 13.sp
+                            style = MaterialTheme.typography.bodyMedium
                         )
                     }
 
@@ -123,7 +117,7 @@ fun LoginScreen(
                             .fillMaxWidth()
                             .height(48.dp),
                         enabled = token.isNotBlank() && authState !is AuthState.Loading,
-                        shape = RoundedCornerShape(8.dp)
+                        shape = Radius.button
                     ) {
                         if (authState is AuthState.Loading) {
                             CircularProgressIndicator(
@@ -138,18 +132,14 @@ fun LoginScreen(
                 }
             }
 
+            Spacer(modifier = Modifier.height(Spacing.xl))
+
             Text(
-                text = "GitHub Settings → Developer settings\n→ Personal access tokens에서 발급",
-                fontSize = 12.sp,
+                text = "Settings → Developer settings → Personal access tokens에서 발급\n필요 권한: repo, read:user",
+                style = MaterialTheme.typography.labelMedium,
                 color = GitHubTextSecondary,
                 textAlign = TextAlign.Center,
                 lineHeight = 18.sp
-            )
-
-            Text(
-                text = "필요 권한: repo, read:user",
-                fontSize = 12.sp,
-                color = GitHubTextSecondary
             )
         }
     }

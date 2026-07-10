@@ -1,13 +1,10 @@
 package com.ydh.salvio.ui.screen.dashboard
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -22,6 +19,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.ydh.salvio.data.model.GitHubCommit
+import com.ydh.salvio.ui.component.ErrorState
+import com.ydh.salvio.ui.component.LoadingState
+import com.ydh.salvio.ui.component.SalvioCard
+import com.ydh.salvio.ui.component.SalvioTopBar
+import com.ydh.salvio.ui.component.SectionHeader
 import com.ydh.salvio.ui.theme.*
 import com.ydh.salvio.viewmodel.DashboardUiState
 import com.ydh.salvio.viewmodel.DashboardViewModel
@@ -53,10 +55,10 @@ fun DashboardScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
+            SalvioTopBar(
                 title = {
                     Column {
-                        Text(repoName, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                        Text(repoName, style = MaterialTheme.typography.titleMedium)
                         Text(owner, fontSize = 12.sp, color = GitHubTextSecondary)
                     }
                 },
@@ -72,36 +74,18 @@ fun DashboardScreen(
                     IconButton(onClick = { dashboardViewModel.loadDashboard(owner, repoName) }) {
                         Icon(Icons.Default.Refresh, contentDescription = "새로고침")
                     }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface)
+                }
             )
         },
         containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->
-        // 첫 로드: 풀스크린 스피너
         if (state.isLoading && state.stats == null) {
-            Box(
-                modifier = Modifier.fillMaxSize().padding(paddingValues),
-                contentAlignment = Alignment.Center
-            ) { CircularProgressIndicator() }
+            LoadingState(Modifier.padding(paddingValues))
             return@Scaffold
         }
 
-        // 첫 로드 실패: 에러 화면
         if (state.error != null && state.stats == null) {
-            Box(
-                modifier = Modifier.fillMaxSize().padding(paddingValues),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Icon(Icons.Default.ErrorOutline, contentDescription = null, tint = GitHubRed, modifier = Modifier.size(48.dp))
-                    Text("데이터를 불러오지 못했습니다.", color = GitHubTextSecondary)
-                    Button(onClick = { dashboardViewModel.loadDashboard(owner, repoName) }) { Text("다시 시도") }
-                }
-            }
+            ErrorState("데이터를 불러오지 못했습니다.", { dashboardViewModel.loadDashboard(owner, repoName) }, Modifier.padding(paddingValues))
             return@Scaffold
         }
 
@@ -111,27 +95,11 @@ fun DashboardScreen(
             modifier = Modifier.padding(paddingValues)
         ) {
             LazyColumn(
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                contentPadding = PaddingValues(Spacing.screen),
+                verticalArrangement = Arrangement.spacedBy(Spacing.md)
             ) {
-                // 갱신 중 에러 배너
                 if (state.error != null && state.stats != null) {
-                    item {
-                        Surface(
-                            shape = RoundedCornerShape(8.dp),
-                            color = GitHubRed.copy(alpha = 0.1f),
-                            border = BorderStroke(1.dp, GitHubRed.copy(alpha = 0.3f))
-                        ) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth().padding(12.dp),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(Icons.Default.ErrorOutline, contentDescription = null, tint = GitHubRed, modifier = Modifier.size(16.dp))
-                                Text("일부 데이터를 불러오지 못했습니다.", fontSize = 13.sp, color = GitHubRed, modifier = Modifier.weight(1f))
-                            }
-                        }
-                    }
+                    item { RefreshErrorBanner() }
                 }
                 item { StatsRow(state, onNavigateToPRs, onNavigateToBranches) }
                 item { QuickActionsRow(onNavigateToPRs, onNavigateToBranches, onNavigateToStats, onNavigateToIssues, onNavigateToReleases) }
@@ -144,6 +112,23 @@ fun DashboardScreen(
 }
 
 @Composable
+private fun RefreshErrorBanner() {
+    Surface(
+        shape = Radius.button,
+        color = GitHubRed.copy(alpha = 0.1f)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(Spacing.md),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(Icons.Default.ErrorOutline, contentDescription = null, tint = GitHubRed, modifier = Modifier.size(16.dp))
+            Text("일부 데이터를 불러오지 못했습니다.", fontSize = 13.sp, color = GitHubRed)
+        }
+    }
+}
+
+@Composable
 private fun StatsRow(
     state: DashboardUiState,
     onNavigateToPRs: () -> Unit,
@@ -151,36 +136,12 @@ private fun StatsRow(
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+        horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
     ) {
-        StatCard(
-            modifier = Modifier.weight(1f),
-            label = "Open PR",
-            value = state.stats?.openPrCount?.toString() ?: "-",
-            color = GitHubGreen,
-            onClick = onNavigateToPRs
-        )
-        StatCard(
-            modifier = Modifier.weight(1f),
-            label = "Merged PR",
-            value = state.stats?.mergedPrCount?.toString() ?: "-",
-            color = GitHubBlue,
-            onClick = onNavigateToPRs
-        )
-        StatCard(
-            modifier = Modifier.weight(1f),
-            label = "브랜치",
-            value = state.stats?.branchCount?.toString() ?: "-",
-            color = GitHubYellow,
-            onClick = onNavigateToBranches
-        )
-        StatCard(
-            modifier = Modifier.weight(1f),
-            label = "기여자",
-            value = state.stats?.contributorCount?.toString() ?: "-",
-            color = GitHubPurple,
-            onClick = {}
-        )
+        StatCard(Modifier.weight(1f), "Open PR", state.stats?.openPrCount?.toString() ?: "-", onNavigateToPRs)
+        StatCard(Modifier.weight(1f), "Merged", state.stats?.mergedPrCount?.toString() ?: "-", onNavigateToPRs)
+        StatCard(Modifier.weight(1f), "브랜치", state.stats?.branchCount?.toString() ?: "-", onNavigateToBranches)
+        StatCard(Modifier.weight(1f), "기여자", state.stats?.contributorCount?.toString() ?: "-", {})
     }
 }
 
@@ -189,20 +150,14 @@ private fun StatCard(
     modifier: Modifier = Modifier,
     label: String,
     value: String,
-    color: androidx.compose.ui.graphics.Color,
     onClick: () -> Unit
 ) {
-    Card(
-        modifier = modifier.clickable { onClick() },
-        shape = RoundedCornerShape(10.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = BorderStroke(1.dp, GitHubBorder)
-    ) {
+    SalvioCard(modifier = modifier, onClick = onClick) {
         Column(
-            modifier = Modifier.padding(12.dp),
+            modifier = Modifier.padding(vertical = Spacing.md, horizontal = Spacing.sm),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text(text = value, fontSize = 22.sp, fontWeight = FontWeight.Bold, color = color)
+            Text(text = value, fontSize = 22.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
             Spacer(modifier = Modifier.height(2.dp))
             Text(text = label, fontSize = 11.sp, color = GitHubTextSecondary)
         }
@@ -217,10 +172,10 @@ private fun QuickActionsRow(
     onNavigateToIssues: () -> Unit,
     onNavigateToReleases: () -> Unit
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
         ) {
             ActionButton(Modifier.weight(1f), Icons.Default.MergeType, "Pull Requests", onNavigateToPRs)
             ActionButton(Modifier.weight(1f), Icons.Default.AccountTree, "브랜치", onNavigateToBranches)
@@ -228,7 +183,7 @@ private fun QuickActionsRow(
         }
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
         ) {
             ActionButton(Modifier.weight(1f), Icons.Default.BugReport, "Issues", onNavigateToIssues)
             ActionButton(Modifier.weight(1f), Icons.Default.LocalOffer, "Releases", onNavigateToReleases)
@@ -244,18 +199,13 @@ private fun ActionButton(
     label: String,
     onClick: () -> Unit
 ) {
-    OutlinedCard(
-        modifier = modifier.clickable { onClick() },
-        shape = RoundedCornerShape(10.dp),
-        border = BorderStroke(1.dp, GitHubBorder),
-        colors = CardDefaults.outlinedCardColors(containerColor = MaterialTheme.colorScheme.surface)
-    ) {
+    SalvioCard(modifier = modifier, onClick = onClick) {
         Column(
-            modifier = Modifier.padding(12.dp).fillMaxWidth(),
+            modifier = Modifier.padding(vertical = Spacing.md, horizontal = Spacing.sm).fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(4.dp)
+            verticalArrangement = Arrangement.spacedBy(Spacing.xs)
         ) {
-            Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
+            Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(20.dp))
             Text(text = label, fontSize = 11.sp, color = GitHubTextSecondary)
         }
     }
@@ -263,13 +213,17 @@ private fun ActionButton(
 
 @Composable
 private fun RecentCommitsSection(commits: List<GitHubCommit>, onCommitClick: (sha: String) -> Unit) {
-    SectionCard(title = "최근 커밋", icon = Icons.Default.Commit) {
-        if (commits.isEmpty()) {
-            Text("커밋이 없습니다.", color = GitHubTextSecondary, fontSize = 13.sp)
-        } else {
-            commits.forEach { commit ->
-                CommitItem(commit, onClick = { onCommitClick(commit.sha) })
-                if (commit != commits.last()) HorizontalDivider(color = GitHubBorder, thickness = 0.5.dp)
+    SalvioCard(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(Spacing.card)) {
+            SectionHeader(title = "최근 커밋", icon = Icons.Default.Commit)
+            Spacer(modifier = Modifier.height(Spacing.md))
+            if (commits.isEmpty()) {
+                Text("커밋이 없습니다.", color = GitHubTextSecondary, fontSize = 13.sp)
+            } else {
+                commits.forEach { commit ->
+                    CommitItem(commit, onClick = { onCommitClick(commit.sha) })
+                    if (commit != commits.last()) HorizontalDivider(color = GitHubBorderMuted, thickness = 0.5.dp)
+                }
             }
         }
     }
@@ -280,8 +234,9 @@ private fun CommitItem(commit: GitHubCommit, onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .clickable { onClick() }
-            .padding(vertical = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(10.dp)
+            .padding(vertical = Spacing.sm),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.md),
+        verticalAlignment = Alignment.CenterVertically
     ) {
         AsyncImage(
             model = commit.author?.avatarUrl,
@@ -313,30 +268,34 @@ private fun CommitItem(commit: GitHubCommit, onClick: () -> Unit) {
 
 @Composable
 private fun OpenPRsSection(state: DashboardUiState, onNavigateToPRs: () -> Unit) {
-    SectionCard(
-        title = "열린 Pull Requests",
-        icon = Icons.Default.MergeType,
-        action = if (state.openPrs.isNotEmpty()) "모두 보기" to onNavigateToPRs else null
-    ) {
-        if (state.openPrs.isEmpty()) {
-            Text("열린 PR이 없습니다.", color = GitHubTextSecondary, fontSize = 13.sp)
-        } else {
-            state.openPrs.forEach { pr ->
-                Row(
-                    modifier = Modifier
-                        .clickable { onNavigateToPRs() }
-                        .padding(vertical = 6.dp),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(Icons.Default.MergeType, contentDescription = null, tint = GitHubGreen, modifier = Modifier.size(16.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(text = pr.title, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        Text(text = "#${pr.number} • ${pr.user.login}", fontSize = 11.sp, color = GitHubTextSecondary)
+    SalvioCard(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(Spacing.card)) {
+            SectionHeader(
+                title = "열린 Pull Requests",
+                icon = Icons.Default.MergeType,
+                action = if (state.openPrs.isNotEmpty()) "모두 보기" to onNavigateToPRs else null
+            )
+            Spacer(modifier = Modifier.height(Spacing.md))
+            if (state.openPrs.isEmpty()) {
+                Text("열린 PR이 없습니다.", color = GitHubTextSecondary, fontSize = 13.sp)
+            } else {
+                state.openPrs.forEach { pr ->
+                    Row(
+                        modifier = Modifier
+                            .clickable { onNavigateToPRs() }
+                            .padding(vertical = Spacing.sm),
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.md),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Default.MergeType, contentDescription = null, tint = GitHubGreen, modifier = Modifier.size(16.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(text = pr.title, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(text = "#${pr.number} • ${pr.user.login}", fontSize = 11.sp, color = GitHubTextSecondary)
+                        }
+                        Icon(Icons.Default.ChevronRight, contentDescription = null, tint = GitHubTextSecondary, modifier = Modifier.size(16.dp))
                     }
-                    Icon(Icons.Default.ChevronRight, contentDescription = null, tint = GitHubTextSecondary, modifier = Modifier.size(16.dp))
+                    if (pr != state.openPrs.last()) HorizontalDivider(color = GitHubBorderMuted, thickness = 0.5.dp)
                 }
-                if (pr != state.openPrs.last()) HorizontalDivider(color = GitHubBorder, thickness = 0.5.dp)
             }
         }
     }
@@ -345,53 +304,28 @@ private fun OpenPRsSection(state: DashboardUiState, onNavigateToPRs: () -> Unit)
 @Composable
 private fun ContributorsSection(state: DashboardUiState) {
     if (state.contributors.isNotEmpty()) {
-        SectionCard(title = "기여자", icon = Icons.Default.People) {
-            state.contributors.take(5).forEach { contributor ->
-                Row(
-                    modifier = Modifier.padding(vertical = 6.dp),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    AsyncImage(
-                        model = contributor.avatarUrl,
-                        contentDescription = null,
-                        modifier = Modifier.size(28.dp).clip(CircleShape).background(GitHubBorder)
-                    )
-                    Text(text = contributor.login, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
-                    Text(text = "${contributor.contributions} commits", fontSize = 12.sp, color = GitHubTextSecondary)
-                }
-                if (contributor != state.contributors.take(5).last()) HorizontalDivider(color = GitHubBorder, thickness = 0.5.dp)
-            }
-        }
-    }
-}
-
-@Composable
-private fun SectionCard(
-    title: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    action: Pair<String, () -> Unit>? = null,
-    content: @Composable ColumnScope.() -> Unit
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(10.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = BorderStroke(1.dp, GitHubBorder)
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(icon, contentDescription = null, tint = GitHubTextSecondary, modifier = Modifier.size(16.dp))
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(text = title, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, modifier = Modifier.weight(1f))
-                action?.let { (label, onClick) ->
-                    TextButton(onClick = onClick, contentPadding = PaddingValues(0.dp)) {
-                        Text(label, fontSize = 12.sp, color = MaterialTheme.colorScheme.primary)
+        SalvioCard(modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.padding(Spacing.card)) {
+                SectionHeader(title = "기여자", icon = Icons.Default.People)
+                Spacer(modifier = Modifier.height(Spacing.md))
+                val top = state.contributors.take(5)
+                top.forEach { contributor ->
+                    Row(
+                        modifier = Modifier.padding(vertical = Spacing.sm),
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.md),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        AsyncImage(
+                            model = contributor.avatarUrl,
+                            contentDescription = null,
+                            modifier = Modifier.size(28.dp).clip(CircleShape).background(GitHubBorder)
+                        )
+                        Text(text = contributor.login, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
+                        Text(text = "${contributor.contributions} commits", fontSize = 12.sp, color = GitHubTextSecondary)
                     }
+                    if (contributor != top.last()) HorizontalDivider(color = GitHubBorderMuted, thickness = 0.5.dp)
                 }
             }
-            Spacer(modifier = Modifier.height(12.dp))
-            content()
         }
     }
 }

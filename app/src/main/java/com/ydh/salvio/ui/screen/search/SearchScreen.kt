@@ -3,11 +3,9 @@ package com.ydh.salvio.ui.screen.search
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -25,6 +23,12 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ydh.salvio.data.model.CodeSearchItem
+import com.ydh.salvio.ui.component.EmptyState
+import com.ydh.salvio.ui.component.ErrorState
+import com.ydh.salvio.ui.component.LoadingState
+import com.ydh.salvio.ui.component.SalvioCard
+import com.ydh.salvio.ui.component.SalvioTopBar
+import com.ydh.salvio.ui.component.StatusBadge
 import com.ydh.salvio.ui.theme.*
 import com.ydh.salvio.viewmodel.DashboardViewModel
 
@@ -46,30 +50,28 @@ fun SearchScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("코드 검색", fontWeight = FontWeight.Bold) },
+            SalvioTopBar(
+                title = { Text("코드 검색", style = MaterialTheme.typography.titleLarge) },
                 navigationIcon = {
                     IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, contentDescription = "뒤로") }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface)
+                }
             )
         },
         containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->
         Column(modifier = Modifier.padding(paddingValues)) {
-            // 검색창
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    .padding(horizontal = Spacing.screen, vertical = Spacing.md),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 OutlinedTextField(
                     value = query,
                     onValueChange = { query = it },
                     modifier = Modifier.weight(1f),
-                    placeholder = { Text("함수명, 변수명, 패턴 검색…", color = GitHubTextSecondary, fontSize = 13.sp) },
+                    placeholder = { Text("함수명, 변수명, 패턴 검색", color = GitHubTextSecondary, fontSize = 13.sp) },
                     leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = GitHubTextSecondary) },
                     trailingIcon = {
                         if (query.isNotEmpty()) {
@@ -84,10 +86,10 @@ fun SearchScreen(
                         focusManager.clearFocus()
                         dashboardViewModel.searchCode(owner, repoName, query)
                     }),
-                    shape = RoundedCornerShape(10.dp),
+                    shape = Radius.field,
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = MaterialTheme.colorScheme.primary,
-                        unfocusedBorderColor = GitHubBorder
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant
                     ),
                     textStyle = LocalTextStyle.current.copy(fontSize = 14.sp)
                 )
@@ -97,25 +99,24 @@ fun SearchScreen(
                         dashboardViewModel.searchCode(owner, repoName, query)
                     },
                     enabled = query.isNotBlank() && !state.isLoading,
-                    shape = RoundedCornerShape(10.dp),
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 14.dp)
+                    shape = Radius.button,
+                    contentPadding = PaddingValues(horizontal = Spacing.lg, vertical = 14.dp)
                 ) {
                     Text("검색")
                 }
             }
 
-            // 검색 힌트
             if (state.results == null && !state.isLoading && state.error == null) {
                 Column(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.screen),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.sm)
                 ) {
-                    Text("검색 팁", fontSize = 12.sp, color = GitHubTextSecondary, fontWeight = FontWeight.SemiBold)
+                    Text("검색 팁", style = MaterialTheme.typography.labelMedium, color = GitHubTextSecondary)
                     listOf(
                         "함수명 또는 클래스명으로 검색",
-                        "파일 확장자 지정: `extension:kt`",
-                        "특정 경로: `path:src/main`",
-                        "언어 지정: `language:kotlin`"
+                        "파일 확장자 지정: extension:kt",
+                        "특정 경로: path:src/main",
+                        "언어 지정: language:kotlin"
                     ).forEach { tip ->
                         Text("• $tip", fontSize = 12.sp, color = GitHubTextSecondary)
                     }
@@ -123,18 +124,11 @@ fun SearchScreen(
             }
 
             when {
-                state.isLoading -> Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) { CircularProgressIndicator() }
-
-                state.error != null -> Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
+                state.isLoading -> LoadingState()
+                state.error != null -> Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                        verticalArrangement = Arrangement.spacedBy(Spacing.sm)
                     ) {
                         Icon(Icons.Default.ErrorOutline, contentDescription = null, tint = GitHubRed, modifier = Modifier.size(40.dp))
                         Text(state.error!!, color = GitHubTextSecondary)
@@ -144,23 +138,15 @@ fun SearchScreen(
                 state.results != null -> {
                     val results = state.results!!
                     if (results.items.isEmpty()) {
-                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                Icon(Icons.Default.SearchOff, contentDescription = null, tint = GitHubTextSecondary, modifier = Modifier.size(40.dp))
-                                Text("\"${state.query}\"에 대한 결과가 없습니다.", color = GitHubTextSecondary)
-                            }
-                        }
+                        EmptyState("\"${state.query}\"에 대한 결과가 없습니다.", Icons.Default.SearchOff)
                     } else {
                         Column {
-                            // 결과 수 헤더
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(horizontal = 16.dp, vertical = 4.dp),
-                                verticalAlignment = Alignment.CenterVertically
+                                    .padding(horizontal = Spacing.screen, vertical = Spacing.xs),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
                             ) {
                                 Text(
                                     text = if (results.totalCount > results.items.size)
@@ -171,27 +157,15 @@ fun SearchScreen(
                                     color = GitHubTextSecondary
                                 )
                                 if (results.incompleteResults || results.totalCount > results.items.size) {
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Surface(
-                                        shape = RoundedCornerShape(4.dp),
-                                        color = GitHubYellow.copy(alpha = 0.15f),
-                                        border = BorderStroke(1.dp, GitHubYellow.copy(alpha = 0.4f))
-                                    ) {
-                                        Text(
-                                            text = "일부 결과만 표시",
-                                            fontSize = 10.sp,
-                                            color = GitHubYellow,
-                                            modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
-                                        )
-                                    }
+                                    StatusBadge(label = "일부 결과만 표시", color = GitHubYellow)
                                 }
                             }
                             LazyColumn(
-                                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                                contentPadding = PaddingValues(horizontal = Spacing.screen, vertical = Spacing.sm),
+                                verticalArrangement = Arrangement.spacedBy(Spacing.sm)
                             ) {
                                 items(results.items) { item ->
-                                    SearchResultCard(item = item, query = state.query)
+                                    SearchResultCard(item = item)
                                 }
                             }
                         }
@@ -203,7 +177,7 @@ fun SearchScreen(
 }
 
 @Composable
-private fun SearchResultCard(item: CodeSearchItem, query: String) {
+private fun SearchResultCard(item: CodeSearchItem) {
     val context = LocalContext.current
     val ext = item.name.substringAfterLast('.', "")
     val extColor = when (ext.lowercase()) {
@@ -213,29 +187,24 @@ private fun SearchResultCard(item: CodeSearchItem, query: String) {
         "js", "ts", "tsx" -> GitHubYellow
         "xml" -> GitHubRed
         "json" -> GitHubPurple
-        "md" -> GitHubTextSecondary
         else -> GitHubTextSecondary
     }
 
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable {
-                try {
-                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(item.htmlUrl)))
-                } catch (_: Exception) {}
-            },
-        shape = RoundedCornerShape(10.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = BorderStroke(1.dp, GitHubBorder)
+    SalvioCard(
+        modifier = Modifier.fillMaxWidth(),
+        onClick = {
+            try {
+                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(item.htmlUrl)))
+            } catch (_: Exception) {}
+        }
     ) {
-        Column(modifier = Modifier.padding(14.dp)) {
+        Column(modifier = Modifier.padding(Spacing.md)) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
             ) {
                 Surface(
-                    shape = RoundedCornerShape(4.dp),
+                    shape = Radius.chip,
                     color = extColor.copy(alpha = 0.15f),
                     border = BorderStroke(1.dp, extColor.copy(alpha = 0.3f))
                 ) {
@@ -263,7 +232,7 @@ private fun SearchResultCard(item: CodeSearchItem, query: String) {
                     modifier = Modifier.size(14.dp)
                 )
             }
-            Spacer(modifier = Modifier.height(6.dp))
+            Spacer(modifier = Modifier.height(Spacing.xs))
             Text(
                 text = item.path,
                 fontSize = 12.sp,

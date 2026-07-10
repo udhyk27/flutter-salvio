@@ -1,22 +1,27 @@
 package com.ydh.salvio.ui.screen.notification
 
-import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ydh.salvio.data.model.GitHubNotification
+import com.ydh.salvio.ui.component.EmptyState
+import com.ydh.salvio.ui.component.ErrorState
+import com.ydh.salvio.ui.component.LoadingState
+import com.ydh.salvio.ui.component.SalvioCard
+import com.ydh.salvio.ui.component.SalvioTopBar
 import com.ydh.salvio.ui.theme.*
 import com.ydh.salvio.viewmodel.NotificationViewModel
 import java.time.Instant
@@ -55,12 +60,12 @@ fun NotificationScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
+            SalvioTopBar(
                 title = {
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("알림", fontWeight = FontWeight.Bold)
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                        Text("알림", style = MaterialTheme.typography.titleLarge)
                         if (unreadCount > 0) {
-                            Badge { Text("$unreadCount") }
+                            Badge(containerColor = GitHubBlue) { Text("$unreadCount") }
                         }
                     }
                 },
@@ -76,46 +81,19 @@ fun NotificationScreen(
                     IconButton(onClick = { notificationViewModel.load() }) {
                         Icon(Icons.Default.Refresh, contentDescription = "새로고침")
                     }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface)
+                }
             )
         },
         containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->
         when {
-            state.isLoading -> Box(
-                modifier = Modifier.fillMaxSize().padding(paddingValues),
-                contentAlignment = Alignment.Center
-            ) { CircularProgressIndicator() }
-
-            state.error != null -> Box(
-                modifier = Modifier.fillMaxSize().padding(paddingValues),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Icon(Icons.Default.ErrorOutline, contentDescription = null, tint = GitHubRed, modifier = Modifier.size(48.dp))
-                    Text("알림을 불러오지 못했습니다.", color = GitHubTextSecondary)
-                    Button(onClick = { notificationViewModel.load() }) { Text("다시 시도") }
-                }
-            }
-
-            state.notifications.isEmpty() -> Box(
-                modifier = Modifier.fillMaxSize().padding(paddingValues),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Icon(Icons.Default.NotificationsNone, contentDescription = null, tint = GitHubTextSecondary, modifier = Modifier.size(48.dp))
-                    Text("읽지 않은 알림이 없습니다.", color = GitHubTextSecondary)
-                }
-            }
-
+            state.isLoading -> LoadingState(Modifier.padding(paddingValues))
+            state.error != null -> ErrorState("알림을 불러오지 못했습니다.", { notificationViewModel.load() }, Modifier.padding(paddingValues))
+            state.notifications.isEmpty() -> EmptyState("읽지 않은 알림이 없습니다.", Icons.Default.NotificationsNone, Modifier.padding(paddingValues))
             else -> LazyColumn(
                 modifier = Modifier.padding(paddingValues),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                contentPadding = PaddingValues(Spacing.screen),
+                verticalArrangement = Arrangement.spacedBy(Spacing.sm)
             ) {
                 items(state.notifications) { notification ->
                     NotificationCard(
@@ -149,32 +127,19 @@ private fun NotificationCard(notification: GitHubNotification, onMarkRead: () ->
         else -> notification.reason
     }
 
-    Card(
+    SalvioCard(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(10.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = if (notification.unread)
-                MaterialTheme.colorScheme.surface
-            else
-                MaterialTheme.colorScheme.surface.copy(alpha = 0.6f)
-        ),
-        border = BorderStroke(
-            1.dp,
-            if (notification.unread) GitHubBlue.copy(alpha = 0.4f) else GitHubBorder
-        )
+        border = if (notification.unread) GitHubBlue.copy(alpha = 0.4f) else GitHubBorderMuted
     ) {
         Row(
-            modifier = Modifier.padding(12.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.padding(Spacing.md),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.md),
             verticalAlignment = Alignment.Top
         ) {
             if (notification.unread) {
                 Box(
-                    modifier = Modifier.padding(top = 4.dp).size(8.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Surface(shape = RoundedCornerShape(4.dp), color = GitHubBlue, modifier = Modifier.size(8.dp)) {}
-                }
+                    modifier = Modifier.padding(top = 5.dp).size(8.dp).clip(CircleShape).background(GitHubBlue)
+                )
             } else {
                 Spacer(modifier = Modifier.size(8.dp))
             }
@@ -198,8 +163,8 @@ private fun NotificationCard(notification: GitHubNotification, onMarkRead: () ->
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
-                Spacer(modifier = Modifier.height(4.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Spacer(modifier = Modifier.height(Spacing.xs))
+                Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm), verticalAlignment = Alignment.CenterVertically) {
                     ReasonBadge(label = reasonLabel)
                     Text(
                         text = formatNotifDate(notification.updatedAt),
@@ -221,8 +186,8 @@ private fun NotificationCard(notification: GitHubNotification, onMarkRead: () ->
 @Composable
 private fun ReasonBadge(label: String) {
     Surface(
-        shape = RoundedCornerShape(4.dp),
-        color = GitHubBorder
+        shape = Radius.chip,
+        color = MaterialTheme.colorScheme.outlineVariant
     ) {
         Text(
             text = label,

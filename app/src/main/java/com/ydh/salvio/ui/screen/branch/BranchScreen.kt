@@ -2,12 +2,9 @@ package com.ydh.salvio.ui.screen.branch
 
 import android.content.Intent
 import android.net.Uri
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -23,6 +20,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ydh.salvio.data.model.GitHubBranch
 import com.ydh.salvio.data.model.GitHubCommit
+import com.ydh.salvio.ui.component.ErrorState
+import com.ydh.salvio.ui.component.LoadingState
+import com.ydh.salvio.ui.component.SalvioCard
+import com.ydh.salvio.ui.component.SalvioTopBar
+import com.ydh.salvio.ui.component.StatusBadge
 import com.ydh.salvio.ui.theme.*
 import com.ydh.salvio.viewmodel.DashboardViewModel
 import java.time.Instant
@@ -45,8 +47,8 @@ fun BranchScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("브랜치", fontWeight = FontWeight.Bold) },
+            SalvioTopBar(
+                title = { Text("브랜치", style = MaterialTheme.typography.titleLarge) },
                 navigationIcon = {
                     IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, contentDescription = "뒤로") }
                 },
@@ -54,34 +56,15 @@ fun BranchScreen(
                     IconButton(onClick = { dashboardViewModel.loadBranches(owner, repoName) }) {
                         Icon(Icons.Default.Refresh, contentDescription = "새로고침")
                     }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface)
+                }
             )
         },
         containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->
         when {
-            state.isLoading && state.branches.isEmpty() -> {
-                Box(
-                    modifier = Modifier.fillMaxSize().padding(paddingValues),
-                    contentAlignment = Alignment.Center
-                ) { CircularProgressIndicator() }
-            }
-            state.error != null && state.branches.isEmpty() -> {
-                Box(
-                    modifier = Modifier.fillMaxSize().padding(paddingValues),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Icon(Icons.Default.ErrorOutline, contentDescription = null, tint = GitHubRed, modifier = Modifier.size(48.dp))
-                        Text("브랜치 목록을 불러오지 못했습니다.", color = GitHubTextSecondary)
-                        Button(onClick = { dashboardViewModel.loadBranches(owner, repoName) }) { Text("다시 시도") }
-                    }
-                }
-            }
+            state.isLoading && state.branches.isEmpty() -> LoadingState(Modifier.padding(paddingValues))
+            state.error != null && state.branches.isEmpty() ->
+                ErrorState("브랜치 목록을 불러오지 못했습니다.", { dashboardViewModel.loadBranches(owner, repoName) }, Modifier.padding(paddingValues))
             else -> {
                 PullToRefreshBox(
                     isRefreshing = state.isLoading,
@@ -89,15 +72,15 @@ fun BranchScreen(
                     modifier = Modifier.padding(paddingValues)
                 ) {
                     LazyColumn(
-                        contentPadding = PaddingValues(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                        contentPadding = PaddingValues(Spacing.screen),
+                        verticalArrangement = Arrangement.spacedBy(Spacing.sm)
                     ) {
                         item {
                             Text(
                                 text = "${state.branches.size}개 브랜치",
-                                fontSize = 13.sp,
+                                style = MaterialTheme.typography.labelMedium,
                                 color = GitHubTextSecondary,
-                                modifier = Modifier.padding(bottom = 4.dp)
+                                modifier = Modifier.padding(bottom = Spacing.xs)
                             )
                         }
                         items(state.branches) { branch ->
@@ -129,27 +112,22 @@ private fun BranchCard(branch: GitHubBranch, latestCommit: GitHubCommit?, onClic
         } catch (e: Exception) { false }
     } ?: false
 
-    Card(
-        modifier = Modifier.fillMaxWidth().clickable { onClick() },
-        shape = RoundedCornerShape(10.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = BorderStroke(1.dp, if (isStale) GitHubYellow.copy(alpha = 0.5f) else GitHubBorder)
-    ) {
+    SalvioCard(modifier = Modifier.fillMaxWidth(), onClick = onClick) {
         Row(
-            modifier = Modifier.padding(16.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.padding(Spacing.card),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.md),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
                 Icons.Default.AccountTree,
                 contentDescription = null,
-                tint = if (branch.protected) GitHubYellow else GitHubGreen,
+                tint = if (branch.protected) GitHubYellow else GitHubTextSecondary,
                 modifier = Modifier.size(18.dp)
             )
             Column(modifier = Modifier.weight(1f)) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
                 ) {
                     Text(
                         text = branch.name,
@@ -161,35 +139,11 @@ private fun BranchCard(branch: GitHubBranch, latestCommit: GitHubCommit?, onClic
                         fontFamily = FontFamily.Monospace,
                         modifier = Modifier.weight(1f, fill = false)
                     )
-                    if (branch.protected) {
-                        Surface(
-                            shape = RoundedCornerShape(4.dp),
-                            color = GitHubYellow.copy(alpha = 0.15f)
-                        ) {
-                            Text(
-                                text = "protected",
-                                fontSize = 10.sp,
-                                color = GitHubYellow,
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                            )
-                        }
-                    }
-                    if (isStale) {
-                        Surface(
-                            shape = RoundedCornerShape(4.dp),
-                            color = GitHubRed.copy(alpha = 0.15f)
-                        ) {
-                            Text(
-                                text = "오래됨",
-                                fontSize = 10.sp,
-                                color = GitHubRed,
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                            )
-                        }
-                    }
+                    if (branch.protected) StatusBadge(label = "protected", color = GitHubYellow)
+                    if (isStale) StatusBadge(label = "오래됨", color = GitHubRed)
                 }
                 latestCommit?.let { commit ->
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(Spacing.xs))
                     Text(
                         text = commit.commit.message.lines().first(),
                         fontSize = 12.sp,
@@ -200,7 +154,7 @@ private fun BranchCard(branch: GitHubBranch, latestCommit: GitHubCommit?, onClic
                     Text(
                         text = "${commit.commit.author.name} • ${formatDate(commit.commit.author.date)}",
                         fontSize = 11.sp,
-                        color = GitHubTextSecondary.copy(alpha = 0.7f)
+                        color = GitHubTextTertiary
                     )
                 }
             }

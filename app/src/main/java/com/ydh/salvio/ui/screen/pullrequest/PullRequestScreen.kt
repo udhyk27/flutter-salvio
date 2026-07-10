@@ -1,11 +1,9 @@
 package com.ydh.salvio.ui.screen.pullrequest
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -24,6 +22,12 @@ import com.ydh.salvio.data.model.CheckRunsResponse
 import com.ydh.salvio.data.model.GitHubPrReview
 import com.ydh.salvio.data.model.GitHubPullRequest
 import com.ydh.salvio.data.model.PullRequestFile
+import com.ydh.salvio.ui.component.EmptyState
+import com.ydh.salvio.ui.component.ErrorState
+import com.ydh.salvio.ui.component.LoadingState
+import com.ydh.salvio.ui.component.SalvioCard
+import com.ydh.salvio.ui.component.SalvioTopBar
+import com.ydh.salvio.ui.component.StatusBadge
 import com.ydh.salvio.ui.theme.*
 import com.ydh.salvio.viewmodel.DashboardViewModel
 import java.time.Instant
@@ -49,8 +53,8 @@ fun PullRequestScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Pull Requests", fontWeight = FontWeight.Bold) },
+            SalvioTopBar(
+                title = { Text("Pull Requests", style = MaterialTheme.typography.titleLarge) },
                 navigationIcon = {
                     IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, contentDescription = "뒤로") }
                 },
@@ -58,8 +62,7 @@ fun PullRequestScreen(
                     IconButton(onClick = { dashboardViewModel.loadPullRequests(owner, repoName) }) {
                         Icon(Icons.Default.Refresh, contentDescription = "새로고침")
                     }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface)
+                }
             )
         },
         containerColor = MaterialTheme.colorScheme.background
@@ -67,8 +70,9 @@ fun PullRequestScreen(
         Column(modifier = Modifier.padding(paddingValues)) {
             TabRow(
                 selectedTabIndex = selectedTab,
-                containerColor = MaterialTheme.colorScheme.surface,
-                contentColor = MaterialTheme.colorScheme.primary
+                containerColor = MaterialTheme.colorScheme.background,
+                contentColor = MaterialTheme.colorScheme.primary,
+                divider = { HorizontalDivider(color = GitHubBorderMuted, thickness = 0.5.dp) }
             ) {
                 tabs.forEachIndexed { index, title ->
                     val count = when {
@@ -94,23 +98,9 @@ fun PullRequestScreen(
             }
 
             when {
-                state.isLoading && state.openPrs.isEmpty() -> {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator()
-                    }
-                }
-                state.error != null && state.openPrs.isEmpty() && state.mergedPrs.isEmpty() && state.closedPrs.isEmpty() -> {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            Icon(Icons.Default.ErrorOutline, contentDescription = null, tint = GitHubRed, modifier = Modifier.size(48.dp))
-                            Text("PR 목록을 불러오지 못했습니다.", color = GitHubTextSecondary)
-                            Button(onClick = { dashboardViewModel.loadPullRequests(owner, repoName) }) { Text("다시 시도") }
-                        }
-                    }
-                }
+                state.isLoading && state.openPrs.isEmpty() -> LoadingState()
+                state.error != null && state.openPrs.isEmpty() && state.mergedPrs.isEmpty() && state.closedPrs.isEmpty() ->
+                    ErrorState("PR 목록을 불러오지 못했습니다.", onRetry = { dashboardViewModel.loadPullRequests(owner, repoName) })
                 else -> {
                     val prs = when (selectedTab) {
                         0 -> state.openPrs
@@ -129,13 +119,11 @@ fun PullRequestScreen(
                         onRefresh = { dashboardViewModel.loadPullRequests(owner, repoName) }
                     ) {
                         if (prs.isEmpty()) {
-                            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                Text("${tabs[selectedTab]} PR이 없습니다.", color = GitHubTextSecondary)
-                            }
+                            EmptyState("${tabs[selectedTab]} PR이 없습니다.", Icons.Default.MergeType)
                         } else {
                             LazyColumn(
-                                contentPadding = PaddingValues(16.dp),
-                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                                contentPadding = PaddingValues(Spacing.screen),
+                                verticalArrangement = Arrangement.spacedBy(Spacing.sm)
                             ) {
                                 items(prs) { pr ->
                                     PullRequestCard(
@@ -178,7 +166,7 @@ private fun PullRequestCard(
 ) {
     val stateColor = when (state) {
         "open" -> GitHubGreen
-        "merged" -> Color(0xFF8957E5)
+        "merged" -> GitHubPurple
         else -> GitHubRed
     }
     val stateIcon = when (state) {
@@ -189,16 +177,11 @@ private fun PullRequestCard(
 
     val reviewSummary = summarizeReviews(reviews)
 
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(10.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = BorderStroke(1.dp, GitHubBorder)
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+    SalvioCard(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(Spacing.card)) {
             Row(
                 verticalAlignment = Alignment.Top,
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                horizontalArrangement = Arrangement.spacedBy(Spacing.md)
             ) {
                 Icon(stateIcon, contentDescription = null, tint = stateColor, modifier = Modifier.size(18.dp))
                 Column(modifier = Modifier.weight(1f)) {
@@ -210,9 +193,9 @@ private fun PullRequestCard(
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis
                     )
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(Spacing.xs))
                     Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(text = "#${pr.number}", fontSize = 12.sp, color = GitHubTextSecondary)
@@ -228,22 +211,23 @@ private fun PullRequestCard(
             }
 
             if (reviewSummary.isNotEmpty() || checkRuns != null) {
-                Spacer(modifier = Modifier.height(8.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Spacer(modifier = Modifier.height(Spacing.sm))
+                Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
                     checkRuns?.let { CiBadge(it) }
                     reviewSummary.forEach { (label, color) ->
-                        ReviewBadge(label = label, color = color)
+                        StatusBadge(label = label, color = color)
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(Spacing.md))
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                horizontalArrangement = Arrangement.spacedBy(Spacing.lg),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
                     Icon(Icons.Default.Comment, contentDescription = null, tint = GitHubTextSecondary, modifier = Modifier.size(14.dp))
                     Text(text = "${pr.comments + pr.reviewComments}", fontSize = 12.sp, color = GitHubTextSecondary)
                 }
@@ -264,9 +248,9 @@ private fun PullRequestCard(
             }
 
             if (isExpanded) {
-                Spacer(modifier = Modifier.height(8.dp))
-                HorizontalDivider(color = GitHubBorder, thickness = 0.5.dp)
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(Spacing.sm))
+                HorizontalDivider(color = GitHubBorderMuted, thickness = 0.5.dp)
+                Spacer(modifier = Modifier.height(Spacing.sm))
                 if (files == null) {
                     Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                         CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
@@ -280,7 +264,7 @@ private fun PullRequestCard(
                             text = "… 외 ${files.size - 20}개 파일",
                             fontSize = 11.sp,
                             color = GitHubTextSecondary,
-                            modifier = Modifier.padding(top = 4.dp)
+                            modifier = Modifier.padding(top = Spacing.xs)
                         )
                     }
                 }
@@ -300,9 +284,9 @@ private fun PrFileRow(file: PullRequestFile) {
     Row(
         modifier = Modifier.padding(vertical = 2.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(6.dp)
+        horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
     ) {
-        Surface(shape = RoundedCornerShape(3.dp), color = statusColor.copy(alpha = 0.15f)) {
+        Surface(shape = Radius.chip, color = statusColor.copy(alpha = 0.15f)) {
             Text(
                 text = when (file.status) {
                     "added" -> "A"
@@ -347,31 +331,14 @@ private fun CiBadge(checkRuns: CheckRunsResponse) {
             "CI 실패" to GitHubRed
         else -> "CI ${runs.first().conclusion ?: "완료"}" to GitHubTextSecondary
     }
-    ReviewBadge(label = label, color = color)
-}
-
-@Composable
-private fun ReviewBadge(label: String, color: Color) {
-    Surface(
-        shape = RoundedCornerShape(12.dp),
-        color = color.copy(alpha = 0.15f),
-        border = BorderStroke(1.dp, color.copy(alpha = 0.4f))
-    ) {
-        Text(
-            text = label,
-            fontSize = 11.sp,
-            color = color,
-            fontWeight = FontWeight.Medium,
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
-        )
-    }
+    StatusBadge(label = label, color = color)
 }
 
 @Composable
 private fun BranchChip(label: String) {
     Surface(
-        shape = RoundedCornerShape(4.dp),
-        color = GitHubBorder
+        shape = Radius.chip,
+        color = MaterialTheme.colorScheme.outlineVariant
     ) {
         Text(
             text = label,
@@ -395,8 +362,8 @@ private fun summarizeReviews(reviews: List<GitHubPrReview>): List<Pair<String, C
     val changesCount = latestByReviewer.values.count { it == "CHANGES_REQUESTED" }
 
     val result = mutableListOf<Pair<String, Color>>()
-    if (approvedCount > 0) result.add("✓ Approved $approvedCount" to Color(0xFF2EA043))
-    if (changesCount > 0) result.add("✗ Changes $changesCount" to Color(0xFFD29922))
+    if (approvedCount > 0) result.add("✓ Approved $approvedCount" to GitHubGreen)
+    if (changesCount > 0) result.add("✗ Changes $changesCount" to GitHubYellow)
     return result
 }
 

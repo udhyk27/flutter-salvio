@@ -1,12 +1,10 @@
 package com.ydh.salvio.ui.screen.stats
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import com.ydh.salvio.data.model.CommitWeekActivity
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -24,6 +22,11 @@ import com.ydh.salvio.data.model.GitHubContributor
 import com.ydh.salvio.data.model.TrafficClones
 import com.ydh.salvio.data.model.TrafficViews
 import com.ydh.salvio.ui.component.CommitActivityChart
+import com.ydh.salvio.ui.component.ErrorState
+import com.ydh.salvio.ui.component.LoadingState
+import com.ydh.salvio.ui.component.SalvioCard
+import com.ydh.salvio.ui.component.SalvioTopBar
+import com.ydh.salvio.ui.component.SectionHeader
 import com.ydh.salvio.ui.theme.*
 import com.ydh.salvio.viewmodel.DashboardViewModel
 
@@ -43,8 +46,8 @@ fun StatsScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("작업 통계", fontWeight = FontWeight.Bold) },
+            SalvioTopBar(
+                title = { Text("작업 통계", style = MaterialTheme.typography.titleLarge) },
                 navigationIcon = {
                     IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, contentDescription = "뒤로") }
                 },
@@ -52,30 +55,15 @@ fun StatsScreen(
                     IconButton(onClick = { dashboardViewModel.loadStats(owner, repoName) }) {
                         Icon(Icons.Default.Refresh, contentDescription = "새로고침")
                     }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface)
+                }
             )
         },
         containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->
         when {
-            state.isLoading && state.contributors.isEmpty() -> {
-                Box(modifier = Modifier.fillMaxSize().padding(paddingValues), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
-                }
-            }
-            state.error != null && state.contributors.isEmpty() -> {
-                Box(modifier = Modifier.fillMaxSize().padding(paddingValues), contentAlignment = Alignment.Center) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Icon(Icons.Default.ErrorOutline, contentDescription = null, tint = GitHubRed, modifier = Modifier.size(48.dp))
-                        Text("통계를 불러오지 못했습니다.", color = GitHubTextSecondary)
-                        Button(onClick = { dashboardViewModel.loadStats(owner, repoName) }) { Text("다시 시도") }
-                    }
-                }
-            }
+            state.isLoading && state.contributors.isEmpty() -> LoadingState(Modifier.padding(paddingValues))
+            state.error != null && state.contributors.isEmpty() ->
+                ErrorState("통계를 불러오지 못했습니다.", { dashboardViewModel.loadStats(owner, repoName) }, Modifier.padding(paddingValues))
             else -> {
                 PullToRefreshBox(
                     isRefreshing = state.isLoading,
@@ -83,8 +71,8 @@ fun StatsScreen(
                     modifier = Modifier.padding(paddingValues)
                 ) {
                     LazyColumn(
-                        contentPadding = PaddingValues(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                        contentPadding = PaddingValues(Spacing.screen),
+                        verticalArrangement = Arrangement.spacedBy(Spacing.md)
                     ) {
                         item { CommitActivityCard(activity = state.commitActivity) }
                         if (state.trafficViews != null || state.trafficClones != null) {
@@ -120,22 +108,13 @@ fun StatsScreen(
 
 @Composable
 private fun CommitActivityCard(activity: List<CommitWeekActivity>) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(10.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = BorderStroke(1.dp, GitHubBorder)
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.ShowChart, contentDescription = null, tint = GitHubGreen, modifier = Modifier.size(18.dp))
-                Spacer(modifier = Modifier.width(6.dp))
-                Text("커밋 활동 (최근 26주)", fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
-            }
-            Spacer(modifier = Modifier.height(12.dp))
+    SalvioCard(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(Spacing.card)) {
+            SectionHeader(title = "커밋 활동 (최근 26주)", icon = Icons.Default.ShowChart)
+            Spacer(modifier = Modifier.height(Spacing.md))
             val totalRecent = activity.takeLast(4).sumOf { it.total }
             CommitActivityChart(activity = activity)
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(Spacing.sm))
             Text(
                 text = "최근 4주 총 $totalRecent commits",
                 fontSize = 12.sp,
@@ -147,28 +126,18 @@ private fun CommitActivityCard(activity: List<CommitWeekActivity>) {
 
 @Composable
 private fun TrafficCard(views: TrafficViews?, clones: TrafficClones?) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(10.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = BorderStroke(1.dp, GitHubBorder)
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.TrendingUp, contentDescription = null, tint = GitHubBlue, modifier = Modifier.size(18.dp))
-                Spacer(modifier = Modifier.width(6.dp))
-                Text("저장소 트래픽 (최근 14일)", fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
-            }
-            Spacer(modifier = Modifier.height(16.dp))
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+    SalvioCard(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(Spacing.card)) {
+            SectionHeader(title = "저장소 트래픽 (최근 14일)", icon = Icons.Default.TrendingUp)
+            Spacer(modifier = Modifier.height(Spacing.lg))
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Spacing.md)) {
                 views?.let {
                     TrafficStatItem(
                         modifier = Modifier.weight(1f),
                         icon = Icons.Default.Visibility,
                         label = "조회수",
                         total = it.count,
-                        uniques = it.uniques,
-                        color = GitHubBlue
+                        uniques = it.uniques
                     )
                 }
                 clones?.let {
@@ -177,8 +146,7 @@ private fun TrafficCard(views: TrafficViews?, clones: TrafficClones?) {
                         icon = Icons.Default.Download,
                         label = "클론 수",
                         total = it.count,
-                        uniques = it.uniques,
-                        color = GitHubGreen
+                        uniques = it.uniques
                     )
                 }
             }
@@ -188,20 +156,15 @@ private fun TrafficCard(views: TrafficViews?, clones: TrafficClones?) {
 
 @Composable
 private fun TrafficDeniedCard() {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(10.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = BorderStroke(1.dp, GitHubBorder)
-    ) {
+    SalvioCard(modifier = Modifier.fillMaxWidth()) {
         Row(
-            modifier = Modifier.padding(16.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.padding(Spacing.card),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.md),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(Icons.Default.Lock, contentDescription = null, tint = GitHubTextSecondary, modifier = Modifier.size(18.dp))
             Column {
-                Text("트래픽 통계 없음", fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+                Text("트래픽 통계 없음", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)
                 Text("저장소 push 권한이 있어야 조회할 수 있습니다.", fontSize = 12.sp, color = GitHubTextSecondary)
             }
         }
@@ -214,22 +177,21 @@ private fun TrafficStatItem(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     label: String,
     total: Int,
-    uniques: Int,
-    color: androidx.compose.ui.graphics.Color
+    uniques: Int
 ) {
-    Card(
+    Surface(
         modifier = modifier,
-        shape = RoundedCornerShape(8.dp),
-        colors = CardDefaults.cardColors(containerColor = color.copy(alpha = 0.08f)),
-        border = BorderStroke(1.dp, color.copy(alpha = 0.2f))
+        shape = Radius.field,
+        color = MaterialTheme.colorScheme.background,
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
     ) {
-        Column(modifier = Modifier.padding(12.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(14.dp))
+        Column(modifier = Modifier.padding(Spacing.md)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                Icon(icon, contentDescription = null, tint = GitHubTextSecondary, modifier = Modifier.size(14.dp))
                 Text(text = label, fontSize = 12.sp, color = GitHubTextSecondary)
             }
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(text = "$total", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = color)
+            Spacer(modifier = Modifier.height(Spacing.sm))
+            Text(text = "$total", fontSize = 24.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
             Text(text = "순방문자 $uniques", fontSize = 11.sp, color = GitHubTextSecondary)
         }
     }
@@ -241,34 +203,25 @@ private fun ContributorRankingCard(
     weeklyStats: List<ContributorWeeklyStats> = emptyList()
 ) {
     val statsMap = weeklyStats.associate { it.author.login to it }
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(10.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = BorderStroke(1.dp, GitHubBorder)
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.EmojiEvents, contentDescription = null, tint = GitHubYellow, modifier = Modifier.size(18.dp))
-                Spacer(modifier = Modifier.width(6.dp))
-                Text("기여자 순위", fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
-            }
-            Spacer(modifier = Modifier.height(12.dp))
+    SalvioCard(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(Spacing.card)) {
+            SectionHeader(title = "기여자 순위", icon = Icons.Default.EmojiEvents)
+            Spacer(modifier = Modifier.height(Spacing.md))
 
             if (contributors.isEmpty()) {
                 Text("데이터가 없습니다.", color = GitHubTextSecondary, fontSize = 13.sp)
             } else {
                 val maxContributions = contributors.maxOfOrNull { it.contributions } ?: 1
-
-                contributors.take(10).forEachIndexed { index, contributor ->
+                val top = contributors.take(10)
+                top.forEachIndexed { index, contributor ->
                     ContributorRow(
                         rank = index + 1,
                         contributor = contributor,
                         maxContributions = maxContributions,
                         weeklyStats = statsMap[contributor.login]
                     )
-                    if (index < contributors.take(10).size - 1) {
-                        HorizontalDivider(color = GitHubBorder, thickness = 0.5.dp, modifier = Modifier.padding(vertical = 4.dp))
+                    if (index < top.size - 1) {
+                        HorizontalDivider(color = GitHubBorderMuted, thickness = 0.5.dp, modifier = Modifier.padding(vertical = Spacing.xs))
                     }
                 }
             }
@@ -290,10 +243,10 @@ private fun ContributorRow(
         else -> MaterialTheme.colorScheme.onSurface
     }
 
-    Column(modifier = Modifier.padding(vertical = 6.dp)) {
+    Column(modifier = Modifier.padding(vertical = Spacing.sm)) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
+            horizontalArrangement = Arrangement.spacedBy(Spacing.md)
         ) {
             Text(
                 text = "#$rank",
@@ -332,19 +285,14 @@ private fun ContributorRow(
                 }
             }
         }
-        Spacer(modifier = Modifier.height(4.dp))
-        Row(modifier = Modifier.padding(start = 38.dp)) {
+        Spacer(modifier = Modifier.height(Spacing.xs))
+        Row(modifier = Modifier.padding(start = 40.dp)) {
             val ratio = contributor.contributions.toFloat() / maxContributions.toFloat()
             LinearProgressIndicator(
                 progress = { ratio },
-                modifier = Modifier.fillMaxWidth().height(4.dp).clip(RoundedCornerShape(2.dp)),
-                color = when (rank) {
-                    1 -> GitHubYellow
-                    2 -> GitHubBlue
-                    3 -> GitHubGreen
-                    else -> GitHubPurple
-                },
-                trackColor = GitHubBorder
+                modifier = Modifier.fillMaxWidth().height(4.dp).clip(RoundedCornerShapeSmall()),
+                color = if (rank <= 3) rankColor else MaterialTheme.colorScheme.primary,
+                trackColor = MaterialTheme.colorScheme.outlineVariant
             )
         }
     }
@@ -352,19 +300,10 @@ private fun ContributorRow(
 
 @Composable
 private fun RecentCommitAuthorsCard(commits: List<Pair<String, Int>>) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(10.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = BorderStroke(1.dp, GitHubBorder)
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.Commit, contentDescription = null, tint = GitHubGreen, modifier = Modifier.size(18.dp))
-                Spacer(modifier = Modifier.width(6.dp))
-                Text("최근 커밋 작성자", fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
-            }
-            Spacer(modifier = Modifier.height(12.dp))
+    SalvioCard(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(Spacing.card)) {
+            SectionHeader(title = "최근 커밋 작성자", icon = Icons.Default.Commit)
+            Spacer(modifier = Modifier.height(Spacing.md))
 
             if (commits.isEmpty()) {
                 Text("데이터가 없습니다.", color = GitHubTextSecondary, fontSize = 13.sp)
@@ -373,16 +312,16 @@ private fun RecentCommitAuthorsCard(commits: List<Pair<String, Int>>) {
                 commits.forEach { (name, count) ->
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
-                        modifier = Modifier.padding(vertical = 4.dp)
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.md),
+                        modifier = Modifier.padding(vertical = Spacing.xs)
                     ) {
                         Text(text = name, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.width(100.dp), maxLines = 1)
                         val ratio = count.toFloat() / maxCount.toFloat()
                         LinearProgressIndicator(
                             progress = { ratio },
-                            modifier = Modifier.weight(1f).height(6.dp).clip(RoundedCornerShape(3.dp)),
-                            color = GitHubBlue,
-                            trackColor = GitHubBorder
+                            modifier = Modifier.weight(1f).height(6.dp).clip(RoundedCornerShapeSmall()),
+                            color = MaterialTheme.colorScheme.primary,
+                            trackColor = MaterialTheme.colorScheme.outlineVariant
                         )
                         Text(text = "$count", fontSize = 12.sp, color = GitHubTextSecondary, modifier = Modifier.width(30.dp))
                     }
@@ -391,3 +330,5 @@ private fun RecentCommitAuthorsCard(commits: List<Pair<String, Int>>) {
         }
     }
 }
+
+private fun RoundedCornerShapeSmall() = androidx.compose.foundation.shape.RoundedCornerShape(3.dp)

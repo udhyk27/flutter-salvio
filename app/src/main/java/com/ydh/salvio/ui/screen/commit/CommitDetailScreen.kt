@@ -1,6 +1,5 @@
 package com.ydh.salvio.ui.screen.commit
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
@@ -8,7 +7,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -25,11 +23,15 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.ydh.salvio.data.model.CommitFile
 import com.ydh.salvio.data.model.GitHubCommitDetail
+import com.ydh.salvio.ui.component.ErrorState
+import com.ydh.salvio.ui.component.LoadingState
+import com.ydh.salvio.ui.component.SalvioCard
+import com.ydh.salvio.ui.component.SalvioTopBar
 import com.ydh.salvio.ui.theme.*
-import com.ydh.salvio.viewmodel.DashboardViewModel
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import com.ydh.salvio.viewmodel.DashboardViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -48,11 +50,11 @@ fun CommitDetailScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
+            SalvioTopBar(
                 title = {
                     Text(
                         text = sha.take(7),
-                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.titleMedium,
                         fontFamily = FontFamily.Monospace
                     )
                 },
@@ -60,36 +62,19 @@ fun CommitDetailScreen(
                     IconButton(onClick = onBack) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "뒤로")
                     }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface)
+                }
             )
         },
         containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->
         when {
-            state.isLoading -> {
-                Box(modifier = Modifier.fillMaxSize().padding(paddingValues), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
-                }
-            }
-            state.error != null -> {
-                Box(modifier = Modifier.fillMaxSize().padding(paddingValues), contentAlignment = Alignment.Center) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Icon(Icons.Default.ErrorOutline, contentDescription = null, tint = GitHubRed, modifier = Modifier.size(48.dp))
-                        Text("커밋 정보를 불러오지 못했습니다.", color = GitHubTextSecondary)
-                        Button(onClick = { dashboardViewModel.loadCommitDetail(owner, repoName, sha) }) { Text("다시 시도") }
-                    }
-                }
-            }
-            state.detail != null -> {
-                CommitDetailContent(
-                    detail = state.detail!!,
-                    modifier = Modifier.padding(paddingValues)
-                )
-            }
+            state.isLoading -> LoadingState(Modifier.padding(paddingValues))
+            state.error != null ->
+                ErrorState("커밋 정보를 불러오지 못했습니다.", { dashboardViewModel.loadCommitDetail(owner, repoName, sha) }, Modifier.padding(paddingValues))
+            state.detail != null -> CommitDetailContent(
+                detail = state.detail!!,
+                modifier = Modifier.padding(paddingValues)
+            )
         }
     }
 }
@@ -100,27 +85,21 @@ private fun CommitDetailContent(detail: GitHubCommitDetail, modifier: Modifier =
 
     LazyColumn(
         modifier = modifier,
-        contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        contentPadding = PaddingValues(Spacing.screen),
+        verticalArrangement = Arrangement.spacedBy(Spacing.md)
     ) {
-        // 커밋 헤더
         item {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(10.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                border = BorderStroke(1.dp, GitHubBorder)
-            ) {
-                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            SalvioCard(modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.padding(Spacing.card), verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
                     Text(
                         text = detail.commit.message,
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 15.sp,
                         color = MaterialTheme.colorScheme.onSurface
                     )
-                    HorizontalDivider(color = GitHubBorder)
+                    HorizontalDivider(color = GitHubBorderMuted, thickness = 0.5.dp)
                     Row(
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.md),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         AsyncImage(
@@ -142,9 +121,8 @@ private fun CommitDetailContent(detail: GitHubCommitDetail, modifier: Modifier =
                             )
                         }
                     }
-                    // 통계
                     detail.stats?.let { stats ->
-                        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(Spacing.md)) {
                             StatChip(label = "+${stats.additions}", color = GitHubGreen)
                             StatChip(label = "-${stats.deletions}", color = GitHubRed)
                             StatChip(label = "${detail.files.size} 파일", color = GitHubTextSecondary)
@@ -160,12 +138,10 @@ private fun CommitDetailContent(detail: GitHubCommitDetail, modifier: Modifier =
             }
         }
 
-        // 파일 목록
         item {
             Text(
                 text = "변경 파일 ${detail.files.size}개",
-                fontWeight = FontWeight.SemiBold,
-                fontSize = 14.sp,
+                style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.onSurface
             )
         }
@@ -201,23 +177,17 @@ private fun FileCard(file: CommitFile, isExpanded: Boolean, onToggle: () -> Unit
         else -> "?"
     }
 
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(8.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = BorderStroke(1.dp, GitHubBorder)
-    ) {
+    SalvioCard(modifier = Modifier.fillMaxWidth()) {
         Column {
-            // 파일 헤더 (항상 표시)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(12.dp),
+                    .padding(Spacing.md),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
             ) {
                 Surface(
-                    shape = RoundedCornerShape(4.dp),
+                    shape = Radius.chip,
                     color = statusColor.copy(alpha = 0.15f)
                 ) {
                     Text(
@@ -251,15 +221,14 @@ private fun FileCard(file: CommitFile, isExpanded: Boolean, onToggle: () -> Unit
                 }
             }
 
-            // Diff 내용 (펼쳤을 때만 표시)
             if (isExpanded && file.patch != null) {
-                HorizontalDivider(color = GitHubBorder)
+                HorizontalDivider(color = GitHubBorderMuted)
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(Color(0xFF0D1117))
+                        .background(GitHubCanvasInset)
                         .horizontalScroll(rememberScrollState())
-                        .padding(12.dp)
+                        .padding(Spacing.md)
                 ) {
                     Column {
                         file.patch.lines().forEach { line ->
@@ -299,7 +268,7 @@ private fun FileCard(file: CommitFile, isExpanded: Boolean, onToggle: () -> Unit
 
 @Composable
 private fun StatChip(label: String, color: Color) {
-    Surface(shape = RoundedCornerShape(4.dp), color = color.copy(alpha = 0.12f)) {
+    Surface(shape = Radius.chip, color = color.copy(alpha = 0.12f)) {
         Text(
             text = label,
             fontSize = 12.sp,

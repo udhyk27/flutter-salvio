@@ -4,14 +4,12 @@ import android.Manifest
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.AccountCircle
@@ -29,6 +27,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.ydh.salvio.data.model.GitHubRepo
+import com.ydh.salvio.ui.component.EmptyState
+import com.ydh.salvio.ui.component.ErrorState
+import com.ydh.salvio.ui.component.LoadingState
+import com.ydh.salvio.ui.component.SalvioCard
+import com.ydh.salvio.ui.component.SalvioTopBar
 import com.ydh.salvio.ui.theme.*
 import com.ydh.salvio.viewmodel.AuthState
 import com.ydh.salvio.viewmodel.AuthViewModel
@@ -86,15 +89,11 @@ fun RepoListScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Repository", fontWeight = FontWeight.Bold) },
+            SalvioTopBar(
+                title = { Text("Repositories", style = MaterialTheme.typography.titleLarge) },
                 actions = {
                     IconButton(onClick = onNavigateToNotifications) {
-                        Icon(
-                            Icons.Outlined.Notifications,
-                            contentDescription = "알림",
-                            tint = GitHubTextSecondary
-                        )
+                        Icon(Icons.Outlined.Notifications, contentDescription = "알림")
                     }
                     IconButton(onClick = { showFavoritesOnly = !showFavoritesOnly }) {
                         Icon(
@@ -111,16 +110,15 @@ fun RepoListScreen(
                             model = it.avatarUrl,
                             contentDescription = null,
                             modifier = Modifier
-                                .size(36.dp)
+                                .padding(end = Spacing.sm)
+                                .size(30.dp)
                                 .clip(CircleShape)
                                 .clickable { showLogoutDialog = true }
-                                .padding(end = 8.dp)
                         )
                     } ?: IconButton(onClick = { showLogoutDialog = true }) {
                         Icon(Icons.Outlined.AccountCircle, contentDescription = "로그아웃")
                     }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface)
+                }
             )
         },
         containerColor = MaterialTheme.colorScheme.background
@@ -129,11 +127,14 @@ fun RepoListScreen(
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
-                placeholder = { Text("Repository 검색...", color = GitHubTextSecondary) },
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-                shape = RoundedCornerShape(8.dp),
+                placeholder = { Text("저장소 검색", color = GitHubTextSecondary) },
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = GitHubTextSecondary) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = Spacing.screen, vertical = Spacing.md),
+                shape = Radius.field,
                 colors = OutlinedTextFieldDefaults.colors(
-                    unfocusedBorderColor = GitHubBorder,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
                     focusedBorderColor = MaterialTheme.colorScheme.primary
                 ),
                 singleLine = true,
@@ -147,19 +148,8 @@ fun RepoListScreen(
             )
 
             when (val state = repoState) {
-                is RepoListState.Loading -> {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator()
-                    }
-                }
-                is RepoListState.Error -> {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Text(state.message, color = MaterialTheme.colorScheme.error)
-                            Button(onClick = { repoViewModel.loadRepos() }) { Text("다시 시도") }
-                        }
-                    }
-                }
+                is RepoListState.Loading -> LoadingState()
+                is RepoListState.Error -> ErrorState(state.message, onRetry = { repoViewModel.loadRepos() })
                 is RepoListState.Success -> {
                     val allRepos = state.repos
                     val filtered = allRepos.filter {
@@ -173,52 +163,41 @@ fun RepoListScreen(
                     val (favRepos, otherRepos) = filtered.partition { favorites.contains(it.fullName) }
                     val sorted = favRepos + otherRepos
 
-                    LazyColumn(
-                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        if (favRepos.isNotEmpty() && !showFavoritesOnly) {
-                            item {
-                                Text(
-                                    "즐겨찾기",
-                                    fontSize = 12.sp,
-                                    color = GitHubTextSecondary,
-                                    fontWeight = FontWeight.SemiBold,
-                                    modifier = Modifier.padding(bottom = 2.dp)
-                                )
+                    if (sorted.isEmpty()) {
+                        EmptyState("저장소가 없습니다.", Icons.Default.FolderOff)
+                    } else {
+                        LazyColumn(
+                            contentPadding = PaddingValues(horizontal = Spacing.screen, vertical = Spacing.sm),
+                            verticalArrangement = Arrangement.spacedBy(Spacing.sm)
+                        ) {
+                            if (favRepos.isNotEmpty() && !showFavoritesOnly) {
+                                item { ListLabel("즐겨찾기") }
                             }
-                        }
-                        items(sorted, key = { it.fullName }) { repo ->
-                            val isFavorite = favorites.contains(repo.fullName)
-                            val isWatched = watchedRepos.contains(repo.fullName)
-                            val showDivider = !showFavoritesOnly && repo == otherRepos.firstOrNull()
+                            items(sorted, key = { it.fullName }) { repo ->
+                                val isFavorite = favorites.contains(repo.fullName)
+                                val isWatched = watchedRepos.contains(repo.fullName)
+                                val showDivider = !showFavoritesOnly && repo == otherRepos.firstOrNull()
 
-                            if (showDivider) {
-                                Text(
-                                    "전체",
-                                    fontSize = 12.sp,
-                                    color = GitHubTextSecondary,
-                                    fontWeight = FontWeight.SemiBold,
-                                    modifier = Modifier.padding(top = 8.dp, bottom = 2.dp)
+                                if (showDivider) ListLabel("전체", top = Spacing.sm)
+
+                                RepoCard(
+                                    repo = repo,
+                                    isFavorite = isFavorite,
+                                    isWatched = isWatched,
+                                    onFavoriteToggle = { repoViewModel.toggleFavorite(repo.fullName) },
+                                    onWatchToggle = {
+                                        if (isWatched) {
+                                            repoViewModel.toggleWatch(repo.fullName)
+                                        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                            pendingWatchRepoName = repo.fullName
+                                            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                                        } else {
+                                            repoViewModel.toggleWatch(repo.fullName)
+                                        }
+                                    },
+                                    onClick = { onRepoSelected(repo.owner.login, repo.name) }
                                 )
                             }
-                            RepoCard(
-                                repo = repo,
-                                isFavorite = isFavorite,
-                                isWatched = isWatched,
-                                onFavoriteToggle = { repoViewModel.toggleFavorite(repo.fullName) },
-                                onWatchToggle = {
-                                    if (isWatched) {
-                                        repoViewModel.toggleWatch(repo.fullName)
-                                    } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                                        pendingWatchRepoName = repo.fullName
-                                        notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                                    } else {
-                                        repoViewModel.toggleWatch(repo.fullName)
-                                    }
-                                },
-                                onClick = { onRepoSelected(repo.owner.login, repo.name) }
-                            )
                         }
                     }
                 }
@@ -226,6 +205,16 @@ fun RepoListScreen(
             }
         }
     }
+}
+
+@Composable
+private fun ListLabel(text: String, top: androidx.compose.ui.unit.Dp = 0.dp) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.labelMedium,
+        color = GitHubTextSecondary,
+        modifier = Modifier.padding(top = top, bottom = Spacing.xs)
+    )
 }
 
 @Composable
@@ -237,17 +226,12 @@ fun RepoCard(
     onWatchToggle: () -> Unit,
     onClick: () -> Unit
 ) {
-    Card(
-        modifier = Modifier.fillMaxWidth().clickable { onClick() },
-        shape = RoundedCornerShape(10.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = BorderStroke(1.dp, if (isFavorite) GitHubYellow.copy(alpha = 0.5f) else GitHubBorder)
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+    SalvioCard(modifier = Modifier.fillMaxWidth(), onClick = onClick) {
+        Column(modifier = Modifier.padding(Spacing.card)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (repo.private) {
-                    Icon(Icons.Default.Lock, contentDescription = null, tint = GitHubTextSecondary, modifier = Modifier.size(14.dp))
-                    Spacer(modifier = Modifier.width(4.dp))
+                    Icon(Icons.Default.Lock, contentDescription = null, tint = GitHubTextSecondary, modifier = Modifier.size(13.dp))
+                    Spacer(modifier = Modifier.width(Spacing.xs))
                 }
                 Text(
                     text = repo.name,
@@ -276,34 +260,41 @@ fun RepoCard(
                         modifier = Modifier.size(18.dp)
                     )
                 }
-
-                Spacer(modifier = Modifier.width(4.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Star, contentDescription = null, tint = GitHubYellow, modifier = Modifier.size(14.dp))
-                    Spacer(modifier = Modifier.width(2.dp))
-                    Text(repo.stars.toString(), fontSize = 12.sp, color = GitHubTextSecondary)
-                }
             }
 
             if (!repo.description.isNullOrBlank()) {
-                Spacer(modifier = Modifier.height(6.dp))
-                Text(repo.description, fontSize = 13.sp, color = GitHubTextSecondary, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Spacer(modifier = Modifier.height(Spacing.xs))
+                Text(
+                    repo.description,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = GitHubTextSecondary,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
             }
 
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(Spacing.md))
 
-            Row(horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.lg), verticalAlignment = Alignment.CenterVertically) {
                 repo.language?.let { lang ->
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(modifier = Modifier.size(10.dp).clip(CircleShape).background(languageColor(lang)))
-                        Spacer(modifier = Modifier.width(4.dp))
+                        Box(modifier = Modifier.size(9.dp).clip(CircleShape).background(languageColor(lang)))
+                        Spacer(modifier = Modifier.width(Spacing.xs))
                         Text(lang, fontSize = 12.sp, color = GitHubTextSecondary)
                     }
                 }
-                Text("${repo.openIssues} issues", fontSize = 12.sp, color = GitHubTextSecondary)
-                Text(repo.defaultBranch, fontSize = 12.sp, color = GitHubGreen)
+                MetaText(Icons.Outlined.Star, repo.stars.toString())
+                MetaText(Icons.Default.ErrorOutline, "${repo.openIssues}")
             }
         }
+    }
+}
+
+@Composable
+private fun MetaText(icon: androidx.compose.ui.graphics.vector.ImageVector, value: String) {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+        Icon(icon, contentDescription = null, tint = GitHubTextSecondary, modifier = Modifier.size(13.dp))
+        Text(value, fontSize = 12.sp, color = GitHubTextSecondary)
     }
 }
 

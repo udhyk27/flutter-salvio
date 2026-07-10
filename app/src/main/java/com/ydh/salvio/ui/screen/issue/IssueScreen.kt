@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -26,6 +25,11 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.ydh.salvio.data.model.GitHubIssue
 import com.ydh.salvio.data.model.GitHubLabel
+import com.ydh.salvio.ui.component.EmptyState
+import com.ydh.salvio.ui.component.ErrorState
+import com.ydh.salvio.ui.component.LoadingState
+import com.ydh.salvio.ui.component.SalvioCard
+import com.ydh.salvio.ui.component.SalvioTopBar
 import com.ydh.salvio.ui.theme.*
 import com.ydh.salvio.viewmodel.DashboardViewModel
 import java.time.Instant
@@ -50,8 +54,8 @@ fun IssueScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Issues", fontWeight = FontWeight.Bold) },
+            SalvioTopBar(
+                title = { Text("Issues", style = MaterialTheme.typography.titleLarge) },
                 navigationIcon = {
                     IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, contentDescription = "뒤로") }
                 },
@@ -59,8 +63,7 @@ fun IssueScreen(
                     IconButton(onClick = { dashboardViewModel.loadIssues(owner, repoName) }) {
                         Icon(Icons.Default.Refresh, contentDescription = "새로고침")
                     }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface)
+                }
             )
         },
         containerColor = MaterialTheme.colorScheme.background
@@ -68,8 +71,9 @@ fun IssueScreen(
         Column(modifier = Modifier.padding(paddingValues)) {
             TabRow(
                 selectedTabIndex = selectedTab,
-                containerColor = MaterialTheme.colorScheme.surface,
-                contentColor = MaterialTheme.colorScheme.primary
+                containerColor = MaterialTheme.colorScheme.background,
+                contentColor = MaterialTheme.colorScheme.primary,
+                divider = { HorizontalDivider(color = GitHubBorderMuted, thickness = 0.5.dp) }
             ) {
                 listOf("Open" to state.openIssues.size, "Closed" to state.closedIssues.size)
                     .forEachIndexed { index, (label, count) ->
@@ -87,23 +91,9 @@ fun IssueScreen(
             }
 
             when {
-                state.isLoading && state.openIssues.isEmpty() && state.closedIssues.isEmpty() -> {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator()
-                    }
-                }
-                state.error != null && state.openIssues.isEmpty() && state.closedIssues.isEmpty() -> {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            Icon(Icons.Default.ErrorOutline, contentDescription = null, tint = GitHubRed, modifier = Modifier.size(48.dp))
-                            Text("이슈 목록을 불러오지 못했습니다.", color = GitHubTextSecondary)
-                            Button(onClick = { dashboardViewModel.loadIssues(owner, repoName) }) { Text("다시 시도") }
-                        }
-                    }
-                }
+                state.isLoading && state.openIssues.isEmpty() && state.closedIssues.isEmpty() -> LoadingState()
+                state.error != null && state.openIssues.isEmpty() && state.closedIssues.isEmpty() ->
+                    ErrorState("이슈 목록을 불러오지 못했습니다.", onRetry = { dashboardViewModel.loadIssues(owner, repoName) })
                 else -> {
                     val issues = if (selectedTab == 0) state.openIssues else state.closedIssues
 
@@ -112,16 +102,14 @@ fun IssueScreen(
                         onRefresh = { dashboardViewModel.loadIssues(owner, repoName) }
                     ) {
                         if (issues.isEmpty()) {
-                            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                Text(
-                                    if (selectedTab == 0) "열린 이슈가 없습니다." else "닫힌 이슈가 없습니다.",
-                                    color = GitHubTextSecondary
-                                )
-                            }
+                            EmptyState(
+                                if (selectedTab == 0) "열린 이슈가 없습니다." else "닫힌 이슈가 없습니다.",
+                                Icons.Default.CheckCircle
+                            )
                         } else {
                             LazyColumn(
-                                contentPadding = PaddingValues(16.dp),
-                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                                contentPadding = PaddingValues(Spacing.screen),
+                                verticalArrangement = Arrangement.spacedBy(Spacing.sm)
                             ) {
                                 items(issues) { issue ->
                                     IssueCard(
@@ -144,21 +132,16 @@ fun IssueScreen(
 
 @Composable
 private fun IssueCard(issue: GitHubIssue, onClick: () -> Unit) {
-    Card(
-        modifier = Modifier.fillMaxWidth().clickable { onClick() },
-        shape = RoundedCornerShape(10.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = BorderStroke(1.dp, GitHubBorder)
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+    SalvioCard(modifier = Modifier.fillMaxWidth(), onClick = onClick) {
+        Column(modifier = Modifier.padding(Spacing.card)) {
             Row(
                 verticalAlignment = Alignment.Top,
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                horizontalArrangement = Arrangement.spacedBy(Spacing.md)
             ) {
                 Icon(
                     imageVector = if (issue.state == "open") Icons.Default.ErrorOutline else Icons.Default.CheckCircle,
                     contentDescription = null,
-                    tint = if (issue.state == "open") GitHubGreen else Color(0xFF8957E5),
+                    tint = if (issue.state == "open") GitHubGreen else GitHubPurple,
                     modifier = Modifier.size(18.dp)
                 )
                 Column(modifier = Modifier.weight(1f)) {
@@ -170,9 +153,9 @@ private fun IssueCard(issue: GitHubIssue, onClick: () -> Unit) {
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis
                     )
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(Spacing.xs))
                     Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(text = "#${issue.number}", fontSize = 12.sp, color = GitHubTextSecondary)
@@ -182,20 +165,16 @@ private fun IssueCard(issue: GitHubIssue, onClick: () -> Unit) {
                             modifier = Modifier.size(16.dp).clip(CircleShape)
                         )
                         Text(text = issue.user.login, fontSize = 12.sp, color = GitHubTextSecondary)
-                        Text(
-                            text = formatIssueDate(issue),
-                            fontSize = 12.sp,
-                            color = GitHubTextSecondary
-                        )
+                        Text(text = formatIssueDate(issue), fontSize = 12.sp, color = GitHubTextSecondary)
                     }
                 }
                 Icon(Icons.Default.OpenInNew, contentDescription = null, tint = GitHubTextSecondary, modifier = Modifier.size(14.dp))
             }
 
             if (issue.labels.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(Spacing.sm))
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     issue.labels.take(4).forEach { label ->
@@ -205,16 +184,16 @@ private fun IssueCard(issue: GitHubIssue, onClick: () -> Unit) {
             }
 
             if (issue.milestone != null || issue.comments > 0) {
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(Spacing.sm))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.md),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     issue.milestone?.let {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            horizontalArrangement = Arrangement.spacedBy(Spacing.xs)
                         ) {
                             Icon(Icons.Default.Flag, contentDescription = null, tint = GitHubTextSecondary, modifier = Modifier.size(12.dp))
                             Text(text = it.title, fontSize = 11.sp, color = GitHubTextSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -223,7 +202,7 @@ private fun IssueCard(issue: GitHubIssue, onClick: () -> Unit) {
                     if (issue.comments > 0) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            horizontalArrangement = Arrangement.spacedBy(Spacing.xs)
                         ) {
                             Icon(Icons.Default.Comment, contentDescription = null, tint = GitHubTextSecondary, modifier = Modifier.size(12.dp))
                             Text(text = "${issue.comments}", fontSize = 11.sp, color = GitHubTextSecondary)
@@ -243,9 +222,9 @@ private fun LabelChip(label: GitHubLabel) {
         GitHubBorder
     }
     Surface(
-        shape = RoundedCornerShape(12.dp),
-        color = labelColor.copy(alpha = 0.2f),
-        border = BorderStroke(1.dp, labelColor.copy(alpha = 0.5f))
+        shape = Radius.chip,
+        color = labelColor.copy(alpha = 0.18f),
+        border = BorderStroke(1.dp, labelColor.copy(alpha = 0.45f))
     ) {
         Text(
             text = label.name,
