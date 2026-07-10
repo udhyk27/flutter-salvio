@@ -97,7 +97,7 @@ private fun CommitDetailContent(detail: GitHubCommitDetail, modifier: Modifier =
                         fontSize = 15.sp,
                         color = MaterialTheme.colorScheme.onSurface
                     )
-                    HorizontalDivider(color = GitHubBorderMuted, thickness = 0.5.dp)
+                    HorizontalDivider(color = SalvioTheme.colors.borderMuted, thickness = 0.5.dp)
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(Spacing.md),
                         verticalAlignment = Alignment.CenterVertically
@@ -105,7 +105,7 @@ private fun CommitDetailContent(detail: GitHubCommitDetail, modifier: Modifier =
                         AsyncImage(
                             model = detail.author?.avatarUrl,
                             contentDescription = null,
-                            modifier = Modifier.size(32.dp).clip(CircleShape).background(GitHubBorder)
+                            modifier = Modifier.size(32.dp).clip(CircleShape).background(SalvioTheme.colors.border)
                         )
                         Column {
                             Text(
@@ -117,15 +117,15 @@ private fun CommitDetailContent(detail: GitHubCommitDetail, modifier: Modifier =
                             Text(
                                 text = formatDate(detail.commit.author.date),
                                 fontSize = 12.sp,
-                                color = GitHubTextSecondary
+                                color = SalvioTheme.colors.textSecondary
                             )
                         }
                     }
                     detail.stats?.let { stats ->
                         Row(horizontalArrangement = Arrangement.spacedBy(Spacing.md)) {
-                            StatChip(label = "+${stats.additions}", color = GitHubGreen)
-                            StatChip(label = "-${stats.deletions}", color = GitHubRed)
-                            StatChip(label = "${detail.files.size} 파일", color = GitHubTextSecondary)
+                            StatChip(label = "+${stats.additions}", color = SalvioTheme.colors.success)
+                            StatChip(label = "-${stats.deletions}", color = SalvioTheme.colors.danger)
+                            StatChip(label = "${detail.files.size} 파일", color = SalvioTheme.colors.textSecondary)
                         }
                     }
                     Text(
@@ -163,11 +163,11 @@ private fun CommitDetailContent(detail: GitHubCommitDetail, modifier: Modifier =
 @Composable
 private fun FileCard(file: CommitFile, isExpanded: Boolean, onToggle: () -> Unit) {
     val statusColor = when (file.status) {
-        "added" -> GitHubGreen
-        "removed" -> GitHubRed
-        "modified" -> GitHubBlue
-        "renamed" -> GitHubYellow
-        else -> GitHubTextSecondary
+        "added" -> SalvioTheme.colors.success
+        "removed" -> SalvioTheme.colors.danger
+        "modified" -> SalvioTheme.colors.accent
+        "renamed" -> SalvioTheme.colors.attention
+        else -> SalvioTheme.colors.textSecondary
     }
     val statusLabel = when (file.status) {
         "added" -> "A"
@@ -207,14 +207,14 @@ private fun FileCard(file: CommitFile, isExpanded: Boolean, onToggle: () -> Unit
                     overflow = TextOverflow.Ellipsis,
                     fontFamily = FontFamily.Monospace
                 )
-                Text(text = "+${file.additions}", fontSize = 12.sp, color = GitHubGreen)
-                Text(text = "-${file.deletions}", fontSize = 12.sp, color = GitHubRed)
+                Text(text = "+${file.additions}", fontSize = 12.sp, color = SalvioTheme.colors.success)
+                Text(text = "-${file.deletions}", fontSize = 12.sp, color = SalvioTheme.colors.danger)
                 if (file.patch != null) {
                     IconButton(onClick = onToggle, modifier = Modifier.size(24.dp)) {
                         Icon(
                             imageVector = if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
                             contentDescription = null,
-                            tint = GitHubTextSecondary,
+                            tint = SalvioTheme.colors.textSecondary,
                             modifier = Modifier.size(18.dp)
                         )
                     }
@@ -222,27 +222,27 @@ private fun FileCard(file: CommitFile, isExpanded: Boolean, onToggle: () -> Unit
             }
 
             if (isExpanded && file.patch != null) {
-                HorizontalDivider(color = GitHubBorderMuted)
+                HorizontalDivider(color = SalvioTheme.colors.borderMuted)
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(GitHubCanvasInset)
+                        .background(SalvioTheme.colors.canvasInset)
                         .horizontalScroll(rememberScrollState())
                         .padding(Spacing.md)
                 ) {
                     Column {
                         file.patch.lines().forEach { line ->
                             val lineColor = when {
-                                line.startsWith("+") -> GitHubGreen.copy(alpha = 0.15f)
-                                line.startsWith("-") -> GitHubRed.copy(alpha = 0.15f)
-                                line.startsWith("@@") -> GitHubBlue.copy(alpha = 0.1f)
+                                line.startsWith("+") -> SalvioTheme.colors.success.copy(alpha = 0.15f)
+                                line.startsWith("-") -> SalvioTheme.colors.danger.copy(alpha = 0.15f)
+                                line.startsWith("@@") -> SalvioTheme.colors.accent.copy(alpha = 0.1f)
                                 else -> Color.Transparent
                             }
                             val textColor = when {
-                                line.startsWith("+") -> GitHubGreen
-                                line.startsWith("-") -> GitHubRed
-                                line.startsWith("@@") -> GitHubBlue
-                                else -> GitHubText
+                                line.startsWith("+") -> SalvioTheme.colors.success
+                                line.startsWith("-") -> SalvioTheme.colors.danger
+                                line.startsWith("@@") -> SalvioTheme.colors.accent
+                                else -> SalvioTheme.colors.text
                             }
                             Row(
                                 modifier = Modifier

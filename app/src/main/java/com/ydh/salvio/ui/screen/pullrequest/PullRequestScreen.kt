@@ -72,7 +72,7 @@ fun PullRequestScreen(
                 selectedTabIndex = selectedTab,
                 containerColor = MaterialTheme.colorScheme.background,
                 contentColor = MaterialTheme.colorScheme.primary,
-                divider = { HorizontalDivider(color = GitHubBorderMuted, thickness = 0.5.dp) }
+                divider = { HorizontalDivider(color = SalvioTheme.colors.borderMuted, thickness = 0.5.dp) }
             ) {
                 tabs.forEachIndexed { index, title ->
                     val count = when {
@@ -165,9 +165,9 @@ private fun PullRequestCard(
     onExpandToggle: () -> Unit = {}
 ) {
     val stateColor = when (state) {
-        "open" -> GitHubGreen
-        "merged" -> GitHubPurple
-        else -> GitHubRed
+        "open" -> SalvioTheme.colors.success
+        "merged" -> SalvioTheme.colors.done
+        else -> SalvioTheme.colors.danger
     }
     val stateIcon = when (state) {
         "open" -> Icons.Default.MergeType
@@ -198,14 +198,14 @@ private fun PullRequestCard(
                         horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(text = "#${pr.number}", fontSize = 12.sp, color = GitHubTextSecondary)
+                        Text(text = "#${pr.number}", fontSize = 12.sp, color = SalvioTheme.colors.textSecondary)
                         AsyncImage(
                             model = pr.user.avatarUrl,
                             contentDescription = null,
                             modifier = Modifier.size(16.dp).clip(CircleShape)
                         )
-                        Text(text = pr.user.login, fontSize = 12.sp, color = GitHubTextSecondary)
-                        Text(text = formatPrDate(pr, state), fontSize = 12.sp, color = GitHubTextSecondary)
+                        Text(text = pr.user.login, fontSize = 12.sp, color = SalvioTheme.colors.textSecondary)
+                        Text(text = formatPrDate(pr, state), fontSize = 12.sp, color = SalvioTheme.colors.textSecondary)
                     }
                 }
             }
@@ -214,7 +214,11 @@ private fun PullRequestCard(
                 Spacer(modifier = Modifier.height(Spacing.sm))
                 Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
                     checkRuns?.let { CiBadge(it) }
-                    reviewSummary.forEach { (label, color) ->
+                    reviewSummary.forEach { (label, tone) ->
+                        val color = when (tone) {
+                            ReviewTone.APPROVED -> SalvioTheme.colors.success
+                            ReviewTone.CHANGES -> SalvioTheme.colors.attention
+                        }
                         StatusBadge(label = label, color = color)
                     }
                 }
@@ -228,8 +232,8 @@ private fun PullRequestCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-                    Icon(Icons.Default.Comment, contentDescription = null, tint = GitHubTextSecondary, modifier = Modifier.size(14.dp))
-                    Text(text = "${pr.comments + pr.reviewComments}", fontSize = 12.sp, color = GitHubTextSecondary)
+                    Icon(Icons.Default.Comment, contentDescription = null, tint = SalvioTheme.colors.textSecondary, modifier = Modifier.size(14.dp))
+                    Text(text = "${pr.comments + pr.reviewComments}", fontSize = 12.sp, color = SalvioTheme.colors.textSecondary)
                 }
                 BranchChip(label = pr.base.ref)
                 Spacer(modifier = Modifier.weight(1f))
@@ -241,7 +245,7 @@ private fun PullRequestCard(
                         Text(
                             text = "$it 파일 ${if (isExpanded) "▲" else "▼"}",
                             fontSize = 12.sp,
-                            color = GitHubBlue
+                            color = SalvioTheme.colors.accent
                         )
                     }
                 }
@@ -249,7 +253,7 @@ private fun PullRequestCard(
 
             if (isExpanded) {
                 Spacer(modifier = Modifier.height(Spacing.sm))
-                HorizontalDivider(color = GitHubBorderMuted, thickness = 0.5.dp)
+                HorizontalDivider(color = SalvioTheme.colors.borderMuted, thickness = 0.5.dp)
                 Spacer(modifier = Modifier.height(Spacing.sm))
                 if (files == null) {
                     Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
@@ -263,7 +267,7 @@ private fun PullRequestCard(
                         Text(
                             text = "… 외 ${files.size - 20}개 파일",
                             fontSize = 11.sp,
-                            color = GitHubTextSecondary,
+                            color = SalvioTheme.colors.textSecondary,
                             modifier = Modifier.padding(top = Spacing.xs)
                         )
                     }
@@ -276,10 +280,10 @@ private fun PullRequestCard(
 @Composable
 private fun PrFileRow(file: PullRequestFile) {
     val statusColor = when (file.status) {
-        "added" -> GitHubGreen
-        "removed" -> GitHubRed
-        "renamed" -> GitHubYellow
-        else -> GitHubBlue
+        "added" -> SalvioTheme.colors.success
+        "removed" -> SalvioTheme.colors.danger
+        "renamed" -> SalvioTheme.colors.attention
+        else -> SalvioTheme.colors.accent
     }
     Row(
         modifier = Modifier.padding(vertical = 2.dp),
@@ -312,7 +316,7 @@ private fun PrFileRow(file: PullRequestFile) {
         Text(
             text = "+${file.additions} -${file.deletions}",
             fontSize = 11.sp,
-            color = GitHubTextSecondary,
+            color = SalvioTheme.colors.textSecondary,
             fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
         )
     }
@@ -324,12 +328,12 @@ private fun CiBadge(checkRuns: CheckRunsResponse) {
     val runs = checkRuns.checkRuns
     val allCompleted = runs.all { it.status == "completed" }
     val (label, color) = when {
-        !allCompleted -> "CI 실행 중" to GitHubYellow
+        !allCompleted -> "CI 실행 중" to SalvioTheme.colors.attention
         runs.all { it.conclusion == "success" || it.conclusion == "skipped" || it.conclusion == "neutral" } ->
-            "CI 통과" to GitHubGreen
+            "CI 통과" to SalvioTheme.colors.success
         runs.any { it.conclusion == "failure" || it.conclusion == "timed_out" } ->
-            "CI 실패" to GitHubRed
-        else -> "CI ${runs.first().conclusion ?: "완료"}" to GitHubTextSecondary
+            "CI 실패" to SalvioTheme.colors.danger
+        else -> "CI ${runs.first().conclusion ?: "완료"}" to SalvioTheme.colors.textSecondary
     }
     StatusBadge(label = label, color = color)
 }
@@ -343,14 +347,17 @@ private fun BranchChip(label: String) {
         Text(
             text = label,
             fontSize = 11.sp,
-            color = GitHubBlue,
+            color = SalvioTheme.colors.accent,
             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
             fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
         )
     }
 }
 
-private fun summarizeReviews(reviews: List<GitHubPrReview>): List<Pair<String, Color>> {
+private enum class ReviewTone { APPROVED, CHANGES }
+
+/** 색은 테마에 의존하므로 여기서는 톤 종류만 반환하고 색은 Composable에서 매핑한다. */
+private fun summarizeReviews(reviews: List<GitHubPrReview>): List<Pair<String, ReviewTone>> {
     if (reviews.isEmpty()) return emptyList()
 
     val latestByReviewer = reviews
@@ -361,9 +368,9 @@ private fun summarizeReviews(reviews: List<GitHubPrReview>): List<Pair<String, C
     val approvedCount = latestByReviewer.values.count { it == "APPROVED" }
     val changesCount = latestByReviewer.values.count { it == "CHANGES_REQUESTED" }
 
-    val result = mutableListOf<Pair<String, Color>>()
-    if (approvedCount > 0) result.add("✓ Approved $approvedCount" to GitHubGreen)
-    if (changesCount > 0) result.add("✗ Changes $changesCount" to GitHubYellow)
+    val result = mutableListOf<Pair<String, ReviewTone>>()
+    if (approvedCount > 0) result.add("✓ Approved $approvedCount" to ReviewTone.APPROVED)
+    if (changesCount > 0) result.add("✗ Changes $changesCount" to ReviewTone.CHANGES)
     return result
 }
 

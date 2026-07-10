@@ -65,7 +65,7 @@ fun NotificationScreen(
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                         Text("알림", style = MaterialTheme.typography.titleLarge)
                         if (unreadCount > 0) {
-                            Badge(containerColor = GitHubBlue) { Text("$unreadCount") }
+                            Badge(containerColor = SalvioTheme.colors.accent) { Text("$unreadCount") }
                         }
                     }
                 },
@@ -75,7 +75,7 @@ fun NotificationScreen(
                 actions = {
                     if (unreadCount > 0) {
                         IconButton(onClick = { showMarkAllDialog = true }) {
-                            Icon(Icons.Default.DoneAll, contentDescription = "모두 읽음", tint = GitHubBlue)
+                            Icon(Icons.Default.DoneAll, contentDescription = "모두 읽음", tint = SalvioTheme.colors.accent)
                         }
                     }
                     IconButton(onClick = { notificationViewModel.load() }) {
@@ -109,11 +109,11 @@ fun NotificationScreen(
 @Composable
 private fun NotificationCard(notification: GitHubNotification, onMarkRead: () -> Unit) {
     val (typeIcon, typeColor) = when (notification.subject.type) {
-        "PullRequest" -> Icons.Default.MergeType to GitHubBlue
-        "Issue" -> Icons.Default.BugReport to GitHubGreen
-        "Release" -> Icons.Default.LocalOffer to GitHubPurple
-        "Commit" -> Icons.Default.Commit to GitHubTextSecondary
-        else -> Icons.Default.Notifications to GitHubTextSecondary
+        "PullRequest" -> Icons.Default.MergeType to SalvioTheme.colors.accent
+        "Issue" -> Icons.Default.BugReport to SalvioTheme.colors.success
+        "Release" -> Icons.Default.LocalOffer to SalvioTheme.colors.done
+        "Commit" -> Icons.Default.Commit to SalvioTheme.colors.textSecondary
+        else -> Icons.Default.Notifications to SalvioTheme.colors.textSecondary
     }
 
     val reasonLabel = when (notification.reason) {
@@ -129,7 +129,7 @@ private fun NotificationCard(notification: GitHubNotification, onMarkRead: () ->
 
     SalvioCard(
         modifier = Modifier.fillMaxWidth(),
-        border = if (notification.unread) GitHubBlue.copy(alpha = 0.4f) else GitHubBorderMuted
+        border = if (notification.unread) SalvioTheme.colors.accent.copy(alpha = 0.4f) else SalvioTheme.colors.borderMuted
     ) {
         Row(
             modifier = Modifier.padding(Spacing.md),
@@ -138,7 +138,7 @@ private fun NotificationCard(notification: GitHubNotification, onMarkRead: () ->
         ) {
             if (notification.unread) {
                 Box(
-                    modifier = Modifier.padding(top = 5.dp).size(8.dp).clip(CircleShape).background(GitHubBlue)
+                    modifier = Modifier.padding(top = 5.dp).size(8.dp).clip(CircleShape).background(SalvioTheme.colors.accent)
                 )
             } else {
                 Spacer(modifier = Modifier.size(8.dp))
@@ -150,7 +150,7 @@ private fun NotificationCard(notification: GitHubNotification, onMarkRead: () ->
                 Text(
                     text = notification.repository.fullName,
                     fontSize = 11.sp,
-                    color = GitHubTextSecondary,
+                    color = SalvioTheme.colors.textSecondary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -169,14 +169,14 @@ private fun NotificationCard(notification: GitHubNotification, onMarkRead: () ->
                     Text(
                         text = formatNotifDate(notification.updatedAt),
                         fontSize = 11.sp,
-                        color = GitHubTextSecondary
+                        color = SalvioTheme.colors.textSecondary
                     )
                 }
             }
 
             if (notification.unread) {
                 IconButton(onClick = onMarkRead, modifier = Modifier.size(32.dp)) {
-                    Icon(Icons.Default.Check, contentDescription = "읽음 처리", tint = GitHubTextSecondary, modifier = Modifier.size(16.dp))
+                    Icon(Icons.Default.Check, contentDescription = "읽음 처리", tint = SalvioTheme.colors.textSecondary, modifier = Modifier.size(16.dp))
                 }
             }
         }
@@ -192,7 +192,7 @@ private fun ReasonBadge(label: String) {
         Text(
             text = label,
             fontSize = 10.sp,
-            color = GitHubTextSecondary,
+            color = SalvioTheme.colors.textSecondary,
             modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
         )
     }

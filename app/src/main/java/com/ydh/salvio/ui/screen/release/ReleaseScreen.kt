@@ -109,20 +109,20 @@ private fun ReleaseCard(release: GitHubRelease, onClick: () -> Unit) {
                 Icon(
                     Icons.Default.LocalOffer,
                     contentDescription = null,
-                    tint = GitHubTextSecondary,
+                    tint = SalvioTheme.colors.textSecondary,
                     modifier = Modifier.size(18.dp)
                 )
                 Text(
                     text = release.tagName,
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 15.sp,
-                    color = GitHubBlue,
+                    color = SalvioTheme.colors.accent,
                     fontFamily = FontFamily.Monospace,
                     modifier = Modifier.weight(1f)
                 )
-                if (release.prerelease) StatusBadge(label = "Pre-release", color = GitHubYellow)
-                if (release.draft) StatusBadge(label = "Draft", color = GitHubTextSecondary)
-                Icon(Icons.Default.OpenInNew, contentDescription = null, tint = GitHubTextSecondary, modifier = Modifier.size(14.dp))
+                if (release.prerelease) StatusBadge(label = "Pre-release", color = SalvioTheme.colors.attention)
+                if (release.draft) StatusBadge(label = "Draft", color = SalvioTheme.colors.textSecondary)
+                Icon(Icons.Default.OpenInNew, contentDescription = null, tint = SalvioTheme.colors.textSecondary, modifier = Modifier.size(14.dp))
             }
 
             release.name?.takeIf { it.isNotBlank() && it != release.tagName }?.let { name ->
@@ -147,23 +147,23 @@ private fun ReleaseCard(release: GitHubRelease, onClick: () -> Unit) {
                     contentDescription = null,
                     modifier = Modifier.size(16.dp).clip(CircleShape)
                 )
-                Text(text = release.author.login, fontSize = 12.sp, color = GitHubTextSecondary)
+                Text(text = release.author.login, fontSize = 12.sp, color = SalvioTheme.colors.textSecondary)
                 Text(
                     text = release.publishedAt?.let { formatReleaseDate(it) } ?: "",
                     fontSize = 12.sp,
-                    color = GitHubTextSecondary
+                    color = SalvioTheme.colors.textSecondary
                 )
             }
 
             release.body?.takeIf { it.isNotBlank() }?.let { body ->
                 val cleanBody = body.replace(Regex("#{1,6}\\s"), "").replace("**", "").replace("*", "").trim()
                 Spacer(modifier = Modifier.height(Spacing.md))
-                HorizontalDivider(color = GitHubBorderMuted, thickness = 0.5.dp)
+                HorizontalDivider(color = SalvioTheme.colors.borderMuted, thickness = 0.5.dp)
                 Spacer(modifier = Modifier.height(Spacing.md))
                 Text(
                     text = cleanBody.lines().take(4).joinToString("\n"),
                     fontSize = 12.sp,
-                    color = GitHubTextSecondary,
+                    color = SalvioTheme.colors.textSecondary,
                     lineHeight = 18.sp,
                     maxLines = 4,
                     overflow = TextOverflow.Ellipsis
@@ -172,25 +172,25 @@ private fun ReleaseCard(release: GitHubRelease, onClick: () -> Unit) {
 
             if (release.assets.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(Spacing.md))
-                HorizontalDivider(color = GitHubBorderMuted, thickness = 0.5.dp)
+                HorizontalDivider(color = SalvioTheme.colors.borderMuted, thickness = 0.5.dp)
                 Spacer(modifier = Modifier.height(Spacing.md))
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(Spacing.md),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(Icons.Default.Inventory2, contentDescription = null, tint = GitHubTextSecondary, modifier = Modifier.size(14.dp))
+                    Icon(Icons.Default.Inventory2, contentDescription = null, tint = SalvioTheme.colors.textSecondary, modifier = Modifier.size(14.dp))
                     Text(
                         text = "${release.assets.size}개 에셋",
                         fontSize = 12.sp,
-                        color = GitHubTextSecondary
+                        color = SalvioTheme.colors.textSecondary
                     )
                     val totalDownloads = release.assets.sumOf { it.downloadCount }
                     if (totalDownloads > 0) {
-                        Icon(Icons.Default.Download, contentDescription = null, tint = GitHubTextSecondary, modifier = Modifier.size(14.dp))
+                        Icon(Icons.Default.Download, contentDescription = null, tint = SalvioTheme.colors.textSecondary, modifier = Modifier.size(14.dp))
                         Text(
                             text = "${formatCount(totalDownloads)} 다운로드",
                             fontSize = 12.sp,
-                            color = GitHubTextSecondary
+                            color = SalvioTheme.colors.textSecondary
                         )
                     }
                 }

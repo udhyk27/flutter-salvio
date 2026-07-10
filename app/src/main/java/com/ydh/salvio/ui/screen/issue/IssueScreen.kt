@@ -73,7 +73,7 @@ fun IssueScreen(
                 selectedTabIndex = selectedTab,
                 containerColor = MaterialTheme.colorScheme.background,
                 contentColor = MaterialTheme.colorScheme.primary,
-                divider = { HorizontalDivider(color = GitHubBorderMuted, thickness = 0.5.dp) }
+                divider = { HorizontalDivider(color = SalvioTheme.colors.borderMuted, thickness = 0.5.dp) }
             ) {
                 listOf("Open" to state.openIssues.size, "Closed" to state.closedIssues.size)
                     .forEachIndexed { index, (label, count) ->
@@ -141,7 +141,7 @@ private fun IssueCard(issue: GitHubIssue, onClick: () -> Unit) {
                 Icon(
                     imageVector = if (issue.state == "open") Icons.Default.ErrorOutline else Icons.Default.CheckCircle,
                     contentDescription = null,
-                    tint = if (issue.state == "open") GitHubGreen else GitHubPurple,
+                    tint = if (issue.state == "open") SalvioTheme.colors.success else SalvioTheme.colors.done,
                     modifier = Modifier.size(18.dp)
                 )
                 Column(modifier = Modifier.weight(1f)) {
@@ -158,17 +158,17 @@ private fun IssueCard(issue: GitHubIssue, onClick: () -> Unit) {
                         horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(text = "#${issue.number}", fontSize = 12.sp, color = GitHubTextSecondary)
+                        Text(text = "#${issue.number}", fontSize = 12.sp, color = SalvioTheme.colors.textSecondary)
                         AsyncImage(
                             model = issue.user.avatarUrl,
                             contentDescription = null,
                             modifier = Modifier.size(16.dp).clip(CircleShape)
                         )
-                        Text(text = issue.user.login, fontSize = 12.sp, color = GitHubTextSecondary)
-                        Text(text = formatIssueDate(issue), fontSize = 12.sp, color = GitHubTextSecondary)
+                        Text(text = issue.user.login, fontSize = 12.sp, color = SalvioTheme.colors.textSecondary)
+                        Text(text = formatIssueDate(issue), fontSize = 12.sp, color = SalvioTheme.colors.textSecondary)
                     }
                 }
-                Icon(Icons.Default.OpenInNew, contentDescription = null, tint = GitHubTextSecondary, modifier = Modifier.size(14.dp))
+                Icon(Icons.Default.OpenInNew, contentDescription = null, tint = SalvioTheme.colors.textSecondary, modifier = Modifier.size(14.dp))
             }
 
             if (issue.labels.isNotEmpty()) {
@@ -195,8 +195,8 @@ private fun IssueCard(issue: GitHubIssue, onClick: () -> Unit) {
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(Spacing.xs)
                         ) {
-                            Icon(Icons.Default.Flag, contentDescription = null, tint = GitHubTextSecondary, modifier = Modifier.size(12.dp))
-                            Text(text = it.title, fontSize = 11.sp, color = GitHubTextSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Icon(Icons.Default.Flag, contentDescription = null, tint = SalvioTheme.colors.textSecondary, modifier = Modifier.size(12.dp))
+                            Text(text = it.title, fontSize = 11.sp, color = SalvioTheme.colors.textSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
                     }
                     if (issue.comments > 0) {
@@ -204,8 +204,8 @@ private fun IssueCard(issue: GitHubIssue, onClick: () -> Unit) {
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(Spacing.xs)
                         ) {
-                            Icon(Icons.Default.Comment, contentDescription = null, tint = GitHubTextSecondary, modifier = Modifier.size(12.dp))
-                            Text(text = "${issue.comments}", fontSize = 11.sp, color = GitHubTextSecondary)
+                            Icon(Icons.Default.Comment, contentDescription = null, tint = SalvioTheme.colors.textSecondary, modifier = Modifier.size(12.dp))
+                            Text(text = "${issue.comments}", fontSize = 11.sp, color = SalvioTheme.colors.textSecondary)
                         }
                     }
                 }
@@ -219,7 +219,7 @@ private fun LabelChip(label: GitHubLabel) {
     val labelColor = try {
         Color(android.graphics.Color.parseColor("#${label.color}"))
     } catch (e: Exception) {
-        GitHubBorder
+        SalvioTheme.colors.border
     }
     Surface(
         shape = Radius.chip,

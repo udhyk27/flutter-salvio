@@ -59,7 +59,7 @@ fun DashboardScreen(
                 title = {
                     Column {
                         Text(repoName, style = MaterialTheme.typography.titleMedium)
-                        Text(owner, fontSize = 12.sp, color = GitHubTextSecondary)
+                        Text(owner, fontSize = 12.sp, color = SalvioTheme.colors.textSecondary)
                     }
                 },
                 navigationIcon = {
@@ -115,15 +115,15 @@ fun DashboardScreen(
 private fun RefreshErrorBanner() {
     Surface(
         shape = Radius.button,
-        color = GitHubRed.copy(alpha = 0.1f)
+        color = SalvioTheme.colors.danger.copy(alpha = 0.1f)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(Spacing.md),
             horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(Icons.Default.ErrorOutline, contentDescription = null, tint = GitHubRed, modifier = Modifier.size(16.dp))
-            Text("일부 데이터를 불러오지 못했습니다.", fontSize = 13.sp, color = GitHubRed)
+            Icon(Icons.Default.ErrorOutline, contentDescription = null, tint = SalvioTheme.colors.danger, modifier = Modifier.size(16.dp))
+            Text("일부 데이터를 불러오지 못했습니다.", fontSize = 13.sp, color = SalvioTheme.colors.danger)
         }
     }
 }
@@ -159,7 +159,7 @@ private fun StatCard(
         ) {
             Text(text = value, fontSize = 22.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
             Spacer(modifier = Modifier.height(2.dp))
-            Text(text = label, fontSize = 11.sp, color = GitHubTextSecondary)
+            Text(text = label, fontSize = 11.sp, color = SalvioTheme.colors.textSecondary)
         }
     }
 }
@@ -206,7 +206,7 @@ private fun ActionButton(
             verticalArrangement = Arrangement.spacedBy(Spacing.xs)
         ) {
             Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(20.dp))
-            Text(text = label, fontSize = 11.sp, color = GitHubTextSecondary)
+            Text(text = label, fontSize = 11.sp, color = SalvioTheme.colors.textSecondary)
         }
     }
 }
@@ -218,11 +218,11 @@ private fun RecentCommitsSection(commits: List<GitHubCommit>, onCommitClick: (sh
             SectionHeader(title = "최근 커밋", icon = Icons.Default.Commit)
             Spacer(modifier = Modifier.height(Spacing.md))
             if (commits.isEmpty()) {
-                Text("커밋이 없습니다.", color = GitHubTextSecondary, fontSize = 13.sp)
+                Text("커밋이 없습니다.", color = SalvioTheme.colors.textSecondary, fontSize = 13.sp)
             } else {
                 commits.forEach { commit ->
                     CommitItem(commit, onClick = { onCommitClick(commit.sha) })
-                    if (commit != commits.last()) HorizontalDivider(color = GitHubBorderMuted, thickness = 0.5.dp)
+                    if (commit != commits.last()) HorizontalDivider(color = SalvioTheme.colors.borderMuted, thickness = 0.5.dp)
                 }
             }
         }
@@ -241,7 +241,7 @@ private fun CommitItem(commit: GitHubCommit, onClick: () -> Unit) {
         AsyncImage(
             model = commit.author?.avatarUrl,
             contentDescription = null,
-            modifier = Modifier.size(28.dp).clip(CircleShape).background(GitHubBorder)
+            modifier = Modifier.size(28.dp).clip(CircleShape).background(SalvioTheme.colors.border)
         )
         Column(modifier = Modifier.weight(1f)) {
             Text(
@@ -254,7 +254,7 @@ private fun CommitItem(commit: GitHubCommit, onClick: () -> Unit) {
             Text(
                 text = "${commit.commit.author.name} • ${formatDate(commit.commit.author.date)}",
                 fontSize = 11.sp,
-                color = GitHubTextSecondary
+                color = SalvioTheme.colors.textSecondary
             )
         }
         Text(
@@ -277,7 +277,7 @@ private fun OpenPRsSection(state: DashboardUiState, onNavigateToPRs: () -> Unit)
             )
             Spacer(modifier = Modifier.height(Spacing.md))
             if (state.openPrs.isEmpty()) {
-                Text("열린 PR이 없습니다.", color = GitHubTextSecondary, fontSize = 13.sp)
+                Text("열린 PR이 없습니다.", color = SalvioTheme.colors.textSecondary, fontSize = 13.sp)
             } else {
                 state.openPrs.forEach { pr ->
                     Row(
@@ -287,14 +287,14 @@ private fun OpenPRsSection(state: DashboardUiState, onNavigateToPRs: () -> Unit)
                         horizontalArrangement = Arrangement.spacedBy(Spacing.md),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(Icons.Default.MergeType, contentDescription = null, tint = GitHubGreen, modifier = Modifier.size(16.dp))
+                        Icon(Icons.Default.MergeType, contentDescription = null, tint = SalvioTheme.colors.success, modifier = Modifier.size(16.dp))
                         Column(modifier = Modifier.weight(1f)) {
                             Text(text = pr.title, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Text(text = "#${pr.number} • ${pr.user.login}", fontSize = 11.sp, color = GitHubTextSecondary)
+                            Text(text = "#${pr.number} • ${pr.user.login}", fontSize = 11.sp, color = SalvioTheme.colors.textSecondary)
                         }
-                        Icon(Icons.Default.ChevronRight, contentDescription = null, tint = GitHubTextSecondary, modifier = Modifier.size(16.dp))
+                        Icon(Icons.Default.ChevronRight, contentDescription = null, tint = SalvioTheme.colors.textSecondary, modifier = Modifier.size(16.dp))
                     }
-                    if (pr != state.openPrs.last()) HorizontalDivider(color = GitHubBorderMuted, thickness = 0.5.dp)
+                    if (pr != state.openPrs.last()) HorizontalDivider(color = SalvioTheme.colors.borderMuted, thickness = 0.5.dp)
                 }
             }
         }
@@ -318,12 +318,12 @@ private fun ContributorsSection(state: DashboardUiState) {
                         AsyncImage(
                             model = contributor.avatarUrl,
                             contentDescription = null,
-                            modifier = Modifier.size(28.dp).clip(CircleShape).background(GitHubBorder)
+                            modifier = Modifier.size(28.dp).clip(CircleShape).background(SalvioTheme.colors.border)
                         )
                         Text(text = contributor.login, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
-                        Text(text = "${contributor.contributions} commits", fontSize = 12.sp, color = GitHubTextSecondary)
+                        Text(text = "${contributor.contributions} commits", fontSize = 12.sp, color = SalvioTheme.colors.textSecondary)
                     }
-                    if (contributor != top.last()) HorizontalDivider(color = GitHubBorderMuted, thickness = 0.5.dp)
+                    if (contributor != top.last()) HorizontalDivider(color = SalvioTheme.colors.borderMuted, thickness = 0.5.dp)
                 }
             }
         }

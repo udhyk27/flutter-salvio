@@ -99,7 +99,7 @@ fun RepoListScreen(
                         Icon(
                             if (showFavoritesOnly) Icons.Default.Star else Icons.Outlined.Star,
                             contentDescription = "즐겨찾기만 보기",
-                            tint = if (showFavoritesOnly) GitHubYellow else GitHubTextSecondary
+                            tint = if (showFavoritesOnly) SalvioTheme.colors.attention else SalvioTheme.colors.textSecondary
                         )
                     }
                     IconButton(onClick = { repoViewModel.loadRepos() }) {
@@ -127,8 +127,8 @@ fun RepoListScreen(
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
-                placeholder = { Text("저장소 검색", color = GitHubTextSecondary) },
-                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = GitHubTextSecondary) },
+                placeholder = { Text("저장소 검색", color = SalvioTheme.colors.textSecondary) },
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = SalvioTheme.colors.textSecondary) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = Spacing.screen, vertical = Spacing.md),
@@ -141,7 +141,7 @@ fun RepoListScreen(
                 trailingIcon = {
                     if (searchQuery.isNotBlank()) {
                         IconButton(onClick = { searchQuery = "" }) {
-                            Icon(Icons.Default.Clear, contentDescription = null, tint = GitHubTextSecondary)
+                            Icon(Icons.Default.Clear, contentDescription = null, tint = SalvioTheme.colors.textSecondary)
                         }
                     }
                 }
@@ -212,7 +212,7 @@ private fun ListLabel(text: String, top: androidx.compose.ui.unit.Dp = 0.dp) {
     Text(
         text = text,
         style = MaterialTheme.typography.labelMedium,
-        color = GitHubTextSecondary,
+        color = SalvioTheme.colors.textSecondary,
         modifier = Modifier.padding(top = top, bottom = Spacing.xs)
     )
 }
@@ -230,7 +230,7 @@ fun RepoCard(
         Column(modifier = Modifier.padding(Spacing.card)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (repo.private) {
-                    Icon(Icons.Default.Lock, contentDescription = null, tint = GitHubTextSecondary, modifier = Modifier.size(13.dp))
+                    Icon(Icons.Default.Lock, contentDescription = null, tint = SalvioTheme.colors.textSecondary, modifier = Modifier.size(13.dp))
                     Spacer(modifier = Modifier.width(Spacing.xs))
                 }
                 Text(
@@ -247,7 +247,7 @@ fun RepoCard(
                     Icon(
                         imageVector = if (isWatched) Icons.Default.Notifications else Icons.Outlined.Notifications,
                         contentDescription = if (isWatched) "알림 끄기" else "PR 알림 켜기",
-                        tint = if (isWatched) GitHubBlue else GitHubTextSecondary,
+                        tint = if (isWatched) SalvioTheme.colors.accent else SalvioTheme.colors.textSecondary,
                         modifier = Modifier.size(18.dp)
                     )
                 }
@@ -256,7 +256,7 @@ fun RepoCard(
                     Icon(
                         imageVector = if (isFavorite) Icons.Default.Star else Icons.Outlined.Star,
                         contentDescription = if (isFavorite) "즐겨찾기 해제" else "즐겨찾기",
-                        tint = if (isFavorite) GitHubYellow else GitHubTextSecondary,
+                        tint = if (isFavorite) SalvioTheme.colors.attention else SalvioTheme.colors.textSecondary,
                         modifier = Modifier.size(18.dp)
                     )
                 }
@@ -267,7 +267,7 @@ fun RepoCard(
                 Text(
                     repo.description,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = GitHubTextSecondary,
+                    color = SalvioTheme.colors.textSecondary,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -280,7 +280,7 @@ fun RepoCard(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Box(modifier = Modifier.size(9.dp).clip(CircleShape).background(languageColor(lang)))
                         Spacer(modifier = Modifier.width(Spacing.xs))
-                        Text(lang, fontSize = 12.sp, color = GitHubTextSecondary)
+                        Text(lang, fontSize = 12.sp, color = SalvioTheme.colors.textSecondary)
                     }
                 }
                 MetaText(Icons.Outlined.Star, repo.stars.toString())
@@ -293,8 +293,8 @@ fun RepoCard(
 @Composable
 private fun MetaText(icon: androidx.compose.ui.graphics.vector.ImageVector, value: String) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-        Icon(icon, contentDescription = null, tint = GitHubTextSecondary, modifier = Modifier.size(13.dp))
-        Text(value, fontSize = 12.sp, color = GitHubTextSecondary)
+        Icon(icon, contentDescription = null, tint = SalvioTheme.colors.textSecondary, modifier = Modifier.size(13.dp))
+        Text(value, fontSize = 12.sp, color = SalvioTheme.colors.textSecondary)
     }
 }
 

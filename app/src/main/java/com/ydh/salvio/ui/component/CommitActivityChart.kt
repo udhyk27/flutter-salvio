@@ -16,9 +16,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ydh.salvio.data.model.CommitWeekActivity
-import com.ydh.salvio.ui.theme.GitHubBorder
-import com.ydh.salvio.ui.theme.GitHubGreen
-import com.ydh.salvio.ui.theme.GitHubTextSecondary
+import com.ydh.salvio.ui.theme.*
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -29,17 +27,17 @@ fun CommitActivityChart(
     modifier: Modifier = Modifier
 ) {
     if (activity.isEmpty()) {
-        Text("커밋 활동 데이터 없음", color = GitHubTextSecondary, fontSize = 13.sp)
+        Text("커밋 활동 데이터 없음", color = SalvioTheme.colors.textSecondary, fontSize = 13.sp)
         return
     }
 
     val recent = activity.takeLast(26)
     val maxTotal = recent.maxOfOrNull { it.total } ?: 1
     val textMeasurer = rememberTextMeasurer()
-    val labelColor = GitHubTextSecondary
-    val barColor = GitHubGreen
-    val barColorLight = GitHubGreen.copy(alpha = 0.4f)
-    val gridColor = GitHubBorder
+    val labelColor = SalvioTheme.colors.textSecondary
+    val barColor = SalvioTheme.colors.success
+    val barColorLight = SalvioTheme.colors.success.copy(alpha = 0.4f)
+    val gridColor = SalvioTheme.colors.border
 
     Canvas(
         modifier = modifier

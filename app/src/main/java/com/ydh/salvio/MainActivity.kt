@@ -1,9 +1,7 @@
 package com.ydh.salvio
 
-import android.graphics.Color
 import android.os.Bundle
 import androidx.activity.ComponentActivity
-import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
@@ -15,11 +13,8 @@ import com.ydh.salvio.ui.theme.SalvioTheme
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // 앱은 항상 다크 테마이므로 시스템 바 아이콘을 밝게 고정
-        enableEdgeToEdge(
-            statusBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
-            navigationBarStyle = SystemBarStyle.dark(Color.TRANSPARENT)
-        )
+        // 시스템 다크/라이트 설정에 따라 시스템 바 아이콘 명암이 자동 반전됨
+        enableEdgeToEdge()
         setContent {
             SalvioTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {

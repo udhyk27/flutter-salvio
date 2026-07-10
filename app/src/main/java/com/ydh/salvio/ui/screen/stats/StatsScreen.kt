@@ -118,7 +118,7 @@ private fun CommitActivityCard(activity: List<CommitWeekActivity>) {
             Text(
                 text = "최근 4주 총 $totalRecent commits",
                 fontSize = 12.sp,
-                color = GitHubTextSecondary
+                color = SalvioTheme.colors.textSecondary
             )
         }
     }
@@ -162,10 +162,10 @@ private fun TrafficDeniedCard() {
             horizontalArrangement = Arrangement.spacedBy(Spacing.md),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(Icons.Default.Lock, contentDescription = null, tint = GitHubTextSecondary, modifier = Modifier.size(18.dp))
+            Icon(Icons.Default.Lock, contentDescription = null, tint = SalvioTheme.colors.textSecondary, modifier = Modifier.size(18.dp))
             Column {
                 Text("트래픽 통계 없음", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)
-                Text("저장소 push 권한이 있어야 조회할 수 있습니다.", fontSize = 12.sp, color = GitHubTextSecondary)
+                Text("저장소 push 권한이 있어야 조회할 수 있습니다.", fontSize = 12.sp, color = SalvioTheme.colors.textSecondary)
             }
         }
     }
@@ -187,12 +187,12 @@ private fun TrafficStatItem(
     ) {
         Column(modifier = Modifier.padding(Spacing.md)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-                Icon(icon, contentDescription = null, tint = GitHubTextSecondary, modifier = Modifier.size(14.dp))
-                Text(text = label, fontSize = 12.sp, color = GitHubTextSecondary)
+                Icon(icon, contentDescription = null, tint = SalvioTheme.colors.textSecondary, modifier = Modifier.size(14.dp))
+                Text(text = label, fontSize = 12.sp, color = SalvioTheme.colors.textSecondary)
             }
             Spacer(modifier = Modifier.height(Spacing.sm))
             Text(text = "$total", fontSize = 24.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
-            Text(text = "순방문자 $uniques", fontSize = 11.sp, color = GitHubTextSecondary)
+            Text(text = "순방문자 $uniques", fontSize = 11.sp, color = SalvioTheme.colors.textSecondary)
         }
     }
 }
@@ -209,7 +209,7 @@ private fun ContributorRankingCard(
             Spacer(modifier = Modifier.height(Spacing.md))
 
             if (contributors.isEmpty()) {
-                Text("데이터가 없습니다.", color = GitHubTextSecondary, fontSize = 13.sp)
+                Text("데이터가 없습니다.", color = SalvioTheme.colors.textSecondary, fontSize = 13.sp)
             } else {
                 val maxContributions = contributors.maxOfOrNull { it.contributions } ?: 1
                 val top = contributors.take(10)
@@ -221,7 +221,7 @@ private fun ContributorRankingCard(
                         weeklyStats = statsMap[contributor.login]
                     )
                     if (index < top.size - 1) {
-                        HorizontalDivider(color = GitHubBorderMuted, thickness = 0.5.dp, modifier = Modifier.padding(vertical = Spacing.xs))
+                        HorizontalDivider(color = SalvioTheme.colors.borderMuted, thickness = 0.5.dp, modifier = Modifier.padding(vertical = Spacing.xs))
                     }
                 }
             }
@@ -237,9 +237,9 @@ private fun ContributorRow(
     weeklyStats: ContributorWeeklyStats? = null
 ) {
     val rankColor = when (rank) {
-        1 -> GitHubYellow
-        2 -> GitHubTextSecondary
-        3 -> GitHubRed.copy(alpha = 0.7f)
+        1 -> SalvioTheme.colors.attention
+        2 -> SalvioTheme.colors.textSecondary
+        3 -> SalvioTheme.colors.danger.copy(alpha = 0.7f)
         else -> MaterialTheme.colorScheme.onSurface
     }
 
@@ -258,7 +258,7 @@ private fun ContributorRow(
             AsyncImage(
                 model = contributor.avatarUrl,
                 contentDescription = null,
-                modifier = Modifier.size(28.dp).clip(CircleShape).background(GitHubBorder)
+                modifier = Modifier.size(28.dp).clip(CircleShape).background(SalvioTheme.colors.border)
             )
             Text(
                 text = contributor.login,
@@ -270,7 +270,7 @@ private fun ContributorRow(
                 Text(
                     text = "${contributor.contributions} commits",
                     fontSize = 12.sp,
-                    color = GitHubTextSecondary
+                    color = SalvioTheme.colors.textSecondary
                 )
                 weeklyStats?.let { ws ->
                     val totalAdditions = ws.weeks.sumOf { it.a }
@@ -279,7 +279,7 @@ private fun ContributorRow(
                         Text(
                             text = "+$totalAdditions / -$totalDeletions",
                             fontSize = 10.sp,
-                            color = GitHubTextSecondary
+                            color = SalvioTheme.colors.textSecondary
                         )
                     }
                 }
@@ -306,7 +306,7 @@ private fun RecentCommitAuthorsCard(commits: List<Pair<String, Int>>) {
             Spacer(modifier = Modifier.height(Spacing.md))
 
             if (commits.isEmpty()) {
-                Text("데이터가 없습니다.", color = GitHubTextSecondary, fontSize = 13.sp)
+                Text("데이터가 없습니다.", color = SalvioTheme.colors.textSecondary, fontSize = 13.sp)
             } else {
                 val maxCount = commits.maxOfOrNull { it.second } ?: 1
                 commits.forEach { (name, count) ->
@@ -323,7 +323,7 @@ private fun RecentCommitAuthorsCard(commits: List<Pair<String, Int>>) {
                             color = MaterialTheme.colorScheme.primary,
                             trackColor = MaterialTheme.colorScheme.outlineVariant
                         )
-                        Text(text = "$count", fontSize = 12.sp, color = GitHubTextSecondary, modifier = Modifier.width(30.dp))
+                        Text(text = "$count", fontSize = 12.sp, color = SalvioTheme.colors.textSecondary, modifier = Modifier.width(30.dp))
                     }
                 }
             }

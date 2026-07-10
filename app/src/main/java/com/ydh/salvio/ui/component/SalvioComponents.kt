@@ -37,12 +37,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.ydh.salvio.ui.theme.GitHubBorder
-import com.ydh.salvio.ui.theme.GitHubBorderMuted
-import com.ydh.salvio.ui.theme.GitHubRed
-import com.ydh.salvio.ui.theme.GitHubTextSecondary
-import com.ydh.salvio.ui.theme.Radius
-import com.ydh.salvio.ui.theme.Spacing
+import com.ydh.salvio.ui.theme.*
 
 /**
  * 미니멀 공용 컴포넌트 모음.
@@ -66,10 +61,10 @@ fun SalvioTopBar(
                 containerColor = MaterialTheme.colorScheme.background,
                 titleContentColor = MaterialTheme.colorScheme.onBackground,
                 navigationIconContentColor = MaterialTheme.colorScheme.onBackground,
-                actionIconContentColor = GitHubTextSecondary
+                actionIconContentColor = SalvioTheme.colors.textSecondary
             )
         )
-        HorizontalDivider(color = GitHubBorderMuted, thickness = 0.5.dp)
+        HorizontalDivider(color = SalvioTheme.colors.borderMuted, thickness = 0.5.dp)
     }
 }
 
@@ -78,7 +73,7 @@ fun SalvioTopBar(
 fun SalvioCard(
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
-    border: Color = GitHubBorderMuted,
+    border: Color = SalvioTheme.colors.borderMuted,
     content: @Composable () -> Unit
 ) {
     val base = if (onClick != null) modifier.clickable { onClick() } else modifier
@@ -99,7 +94,7 @@ fun SectionHeader(
 ) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         if (icon != null) {
-            Icon(icon, contentDescription = null, tint = GitHubTextSecondary, modifier = Modifier.size(15.dp))
+            Icon(icon, contentDescription = null, tint = SalvioTheme.colors.textSecondary, modifier = Modifier.size(15.dp))
             Spacer(modifier = Modifier.width(Spacing.sm))
         }
         Text(
@@ -163,10 +158,10 @@ fun ErrorState(
             Icon(
                 Icons.Default.ErrorOutline,
                 contentDescription = null,
-                tint = GitHubRed,
+                tint = SalvioTheme.colors.danger,
                 modifier = Modifier.size(44.dp)
             )
-            Text(message, color = GitHubTextSecondary, style = MaterialTheme.typography.bodyMedium)
+            Text(message, color = SalvioTheme.colors.textSecondary, style = MaterialTheme.typography.bodyMedium)
             Button(onClick = onRetry, shape = Radius.button) { Text("다시 시도") }
         }
     }
@@ -184,8 +179,8 @@ fun EmptyState(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(Spacing.md)
         ) {
-            Icon(icon, contentDescription = null, tint = GitHubTextSecondary, modifier = Modifier.size(44.dp))
-            Text(message, color = GitHubTextSecondary, style = MaterialTheme.typography.bodyMedium)
+            Icon(icon, contentDescription = null, tint = SalvioTheme.colors.textSecondary, modifier = Modifier.size(44.dp))
+            Text(message, color = SalvioTheme.colors.textSecondary, style = MaterialTheme.typography.bodyMedium)
         }
     }
 }

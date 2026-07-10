@@ -18,10 +18,10 @@ object Spacing {
     val card = 16.dp
 }
 
-/** 모서리 반경 스케일. */
+/** 모서리 반경 스케일. 서정적 분위기를 위해 살짝 넉넉하게. */
 object Radius {
-    val card = RoundedCornerShape(12.dp)
-    val chip = RoundedCornerShape(6.dp)
-    val button = RoundedCornerShape(8.dp)
-    val field = RoundedCornerShape(10.dp)
+    val card = RoundedCornerShape(14.dp)
+    val chip = RoundedCornerShape(8.dp)
+    val button = RoundedCornerShape(10.dp)
+    val field = RoundedCornerShape(12.dp)
 }

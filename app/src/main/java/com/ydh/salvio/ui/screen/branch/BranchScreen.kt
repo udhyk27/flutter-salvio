@@ -79,7 +79,7 @@ fun BranchScreen(
                             Text(
                                 text = "${state.branches.size}개 브랜치",
                                 style = MaterialTheme.typography.labelMedium,
-                                color = GitHubTextSecondary,
+                                color = SalvioTheme.colors.textSecondary,
                                 modifier = Modifier.padding(bottom = Spacing.xs)
                             )
                         }
@@ -121,7 +121,7 @@ private fun BranchCard(branch: GitHubBranch, latestCommit: GitHubCommit?, onClic
             Icon(
                 Icons.Default.AccountTree,
                 contentDescription = null,
-                tint = if (branch.protected) GitHubYellow else GitHubTextSecondary,
+                tint = if (branch.protected) SalvioTheme.colors.attention else SalvioTheme.colors.textSecondary,
                 modifier = Modifier.size(18.dp)
             )
             Column(modifier = Modifier.weight(1f)) {
@@ -139,22 +139,22 @@ private fun BranchCard(branch: GitHubBranch, latestCommit: GitHubCommit?, onClic
                         fontFamily = FontFamily.Monospace,
                         modifier = Modifier.weight(1f, fill = false)
                     )
-                    if (branch.protected) StatusBadge(label = "protected", color = GitHubYellow)
-                    if (isStale) StatusBadge(label = "오래됨", color = GitHubRed)
+                    if (branch.protected) StatusBadge(label = "protected", color = SalvioTheme.colors.attention)
+                    if (isStale) StatusBadge(label = "오래됨", color = SalvioTheme.colors.danger)
                 }
                 latestCommit?.let { commit ->
                     Spacer(modifier = Modifier.height(Spacing.xs))
                     Text(
                         text = commit.commit.message.lines().first(),
                         fontSize = 12.sp,
-                        color = GitHubTextSecondary,
+                        color = SalvioTheme.colors.textSecondary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
                     Text(
                         text = "${commit.commit.author.name} • ${formatDate(commit.commit.author.date)}",
                         fontSize = 11.sp,
-                        color = GitHubTextTertiary
+                        color = SalvioTheme.colors.textTertiary
                     )
                 }
             }
@@ -167,7 +167,7 @@ private fun BranchCard(branch: GitHubBranch, latestCommit: GitHubCommit?, onClic
             Icon(
                 Icons.Default.OpenInNew,
                 contentDescription = null,
-                tint = GitHubTextSecondary,
+                tint = SalvioTheme.colors.textSecondary,
                 modifier = Modifier.size(14.dp)
             )
         }

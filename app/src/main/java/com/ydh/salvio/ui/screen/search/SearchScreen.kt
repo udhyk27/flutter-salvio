@@ -71,12 +71,12 @@ fun SearchScreen(
                     value = query,
                     onValueChange = { query = it },
                     modifier = Modifier.weight(1f),
-                    placeholder = { Text("함수명, 변수명, 패턴 검색", color = GitHubTextSecondary, fontSize = 13.sp) },
-                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = GitHubTextSecondary) },
+                    placeholder = { Text("함수명, 변수명, 패턴 검색", color = SalvioTheme.colors.textSecondary, fontSize = 13.sp) },
+                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = SalvioTheme.colors.textSecondary) },
                     trailingIcon = {
                         if (query.isNotEmpty()) {
                             IconButton(onClick = { query = "" }) {
-                                Icon(Icons.Default.Clear, contentDescription = "지우기", tint = GitHubTextSecondary)
+                                Icon(Icons.Default.Clear, contentDescription = "지우기", tint = SalvioTheme.colors.textSecondary)
                             }
                         }
                     },
@@ -111,14 +111,14 @@ fun SearchScreen(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.screen),
                     verticalArrangement = Arrangement.spacedBy(Spacing.sm)
                 ) {
-                    Text("검색 팁", style = MaterialTheme.typography.labelMedium, color = GitHubTextSecondary)
+                    Text("검색 팁", style = MaterialTheme.typography.labelMedium, color = SalvioTheme.colors.textSecondary)
                     listOf(
                         "함수명 또는 클래스명으로 검색",
                         "파일 확장자 지정: extension:kt",
                         "특정 경로: path:src/main",
                         "언어 지정: language:kotlin"
                     ).forEach { tip ->
-                        Text("• $tip", fontSize = 12.sp, color = GitHubTextSecondary)
+                        Text("• $tip", fontSize = 12.sp, color = SalvioTheme.colors.textSecondary)
                     }
                 }
             }
@@ -130,8 +130,8 @@ fun SearchScreen(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(Spacing.sm)
                     ) {
-                        Icon(Icons.Default.ErrorOutline, contentDescription = null, tint = GitHubRed, modifier = Modifier.size(40.dp))
-                        Text(state.error!!, color = GitHubTextSecondary)
+                        Icon(Icons.Default.ErrorOutline, contentDescription = null, tint = SalvioTheme.colors.danger, modifier = Modifier.size(40.dp))
+                        Text(state.error!!, color = SalvioTheme.colors.textSecondary)
                     }
                 }
 
@@ -154,10 +154,10 @@ fun SearchScreen(
                                     else
                                         "${results.totalCount}개 결과",
                                     fontSize = 12.sp,
-                                    color = GitHubTextSecondary
+                                    color = SalvioTheme.colors.textSecondary
                                 )
                                 if (results.incompleteResults || results.totalCount > results.items.size) {
-                                    StatusBadge(label = "일부 결과만 표시", color = GitHubYellow)
+                                    StatusBadge(label = "일부 결과만 표시", color = SalvioTheme.colors.attention)
                                 }
                             }
                             LazyColumn(
@@ -181,13 +181,13 @@ private fun SearchResultCard(item: CodeSearchItem) {
     val context = LocalContext.current
     val ext = item.name.substringAfterLast('.', "")
     val extColor = when (ext.lowercase()) {
-        "kt", "kts" -> GitHubBlue
-        "java" -> GitHubYellow
-        "py" -> GitHubGreen
-        "js", "ts", "tsx" -> GitHubYellow
-        "xml" -> GitHubRed
-        "json" -> GitHubPurple
-        else -> GitHubTextSecondary
+        "kt", "kts" -> SalvioTheme.colors.accent
+        "java" -> SalvioTheme.colors.attention
+        "py" -> SalvioTheme.colors.success
+        "js", "ts", "tsx" -> SalvioTheme.colors.attention
+        "xml" -> SalvioTheme.colors.danger
+        "json" -> SalvioTheme.colors.done
+        else -> SalvioTheme.colors.textSecondary
     }
 
     SalvioCard(
@@ -220,7 +220,7 @@ private fun SearchResultCard(item: CodeSearchItem) {
                     text = item.name,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.SemiBold,
-                    color = GitHubBlue,
+                    color = SalvioTheme.colors.accent,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f)
@@ -228,7 +228,7 @@ private fun SearchResultCard(item: CodeSearchItem) {
                 Icon(
                     Icons.Default.OpenInNew,
                     contentDescription = null,
-                    tint = GitHubTextSecondary,
+                    tint = SalvioTheme.colors.textSecondary,
                     modifier = Modifier.size(14.dp)
                 )
             }
@@ -236,7 +236,7 @@ private fun SearchResultCard(item: CodeSearchItem) {
             Text(
                 text = item.path,
                 fontSize = 12.sp,
-                color = GitHubTextSecondary,
+                color = SalvioTheme.colors.textSecondary,
                 fontFamily = FontFamily.Monospace,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis

@@ -18,10 +18,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ydh.salvio.ui.component.SalvioCard
-import com.ydh.salvio.ui.theme.GitHubBlue
-import com.ydh.salvio.ui.theme.GitHubTextSecondary
-import com.ydh.salvio.ui.theme.Radius
-import com.ydh.salvio.ui.theme.Spacing
+import com.ydh.salvio.ui.theme.*
 import com.ydh.salvio.viewmodel.AuthState
 import com.ydh.salvio.viewmodel.AuthViewModel
 
@@ -62,7 +59,7 @@ fun LoginScreen(
             Text(
                 text = "GitHub 프로젝트 모니터링",
                 style = MaterialTheme.typography.bodyMedium,
-                color = GitHubTextSecondary,
+                color = SalvioTheme.colors.textSecondary,
                 textAlign = TextAlign.Center
             )
 
@@ -82,7 +79,7 @@ fun LoginScreen(
                     OutlinedTextField(
                         value = token,
                         onValueChange = { token = it },
-                        placeholder = { Text("ghp_xxxxxxxxxxxxxxxxxxxx", color = GitHubTextSecondary) },
+                        placeholder = { Text("ghp_xxxxxxxxxxxxxxxxxxxx", color = SalvioTheme.colors.textSecondary) },
                         visualTransformation = if (showToken) VisualTransformation.None else PasswordVisualTransformation(),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                         trailingIcon = {
@@ -90,13 +87,13 @@ fun LoginScreen(
                                 Icon(
                                     imageVector = if (showToken) Icons.Default.VisibilityOff else Icons.Default.Visibility,
                                     contentDescription = null,
-                                    tint = GitHubTextSecondary
+                                    tint = SalvioTheme.colors.textSecondary
                                 )
                             }
                         },
                         modifier = Modifier.fillMaxWidth(),
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = GitHubBlue,
+                            focusedBorderColor = SalvioTheme.colors.accent,
                             unfocusedBorderColor = MaterialTheme.colorScheme.outline
                         ),
                         singleLine = true,
@@ -137,7 +134,7 @@ fun LoginScreen(
             Text(
                 text = "Settings → Developer settings → Personal access tokens에서 발급\n필요 권한: repo, read:user",
                 style = MaterialTheme.typography.labelMedium,
-                color = GitHubTextSecondary,
+                color = SalvioTheme.colors.textSecondary,
                 textAlign = TextAlign.Center,
                 lineHeight = 18.sp
             )

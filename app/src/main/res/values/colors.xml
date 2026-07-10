@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="canvas">#0D1117</color>
+    <!-- 라이트 기본값. 다크는 values-night/colors.xml 참조 -->
+    <color name="canvas">#FBFAF7</color>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
 </resources>
