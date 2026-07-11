@@ -9,6 +9,9 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.ui.graphics.Color
 
+/** 사용자가 선택할 수 있는 테마 모드. */
+enum class ThemeMode { SYSTEM, LIGHT, DARK }
+
 private fun materialSchemeFrom(c: SalvioColors) = if (c.isLight) {
     lightColorScheme(
         primary = c.accent,

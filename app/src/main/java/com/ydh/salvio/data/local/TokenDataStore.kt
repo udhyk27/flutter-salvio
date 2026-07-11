@@ -20,9 +20,17 @@ class TokenDataStore(private val context: Context) {
         private val FAVORITE_REPOS_KEY = stringPreferencesKey("favorite_repos")
         private val WATCHED_REPOS_KEY = stringPreferencesKey("watched_repos")
         private val LAST_PR_IDS_KEY = stringPreferencesKey("last_pr_ids")
+        private val THEME_MODE_KEY = stringPreferencesKey("theme_mode")
     }
 
     val token: Flow<String?> = context.dataStore.data.map { it[TOKEN_KEY] }
+
+    // 테마 모드 (SYSTEM / LIGHT / DARK). 미설정 시 null → SYSTEM으로 해석
+    val themeMode: Flow<String?> = context.dataStore.data.map { it[THEME_MODE_KEY] }
+
+    suspend fun saveThemeMode(mode: String) {
+        context.dataStore.edit { it[THEME_MODE_KEY] = mode }
+    }
 
     suspend fun saveToken(token: String) {
         context.dataStore.edit { it[TOKEN_KEY] = token }

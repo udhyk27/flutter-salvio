@@ -25,6 +25,7 @@ import com.ydh.salvio.viewmodel.AuthViewModel
 import com.ydh.salvio.viewmodel.DashboardViewModel
 import com.ydh.salvio.viewmodel.NotificationViewModel
 import com.ydh.salvio.viewmodel.RepoViewModel
+import com.ydh.salvio.viewmodel.ThemeViewModel
 
 object Routes {
     const val LOGIN = "login"
@@ -51,7 +52,7 @@ object Routes {
 }
 
 @Composable
-fun SalvioNavGraph() {
+fun SalvioNavGraph(themeViewModel: ThemeViewModel) {
     val navController = rememberNavController()
     val authViewModel: AuthViewModel = viewModel()
     val repoViewModel: RepoViewModel = viewModel()
@@ -74,6 +75,7 @@ fun SalvioNavGraph() {
             RepoListScreen(
                 authViewModel = authViewModel,
                 repoViewModel = repoViewModel,
+                themeViewModel = themeViewModel,
                 onRepoSelected = { owner, repo ->
                     navController.navigate(Routes.dashboard(owner, repo))
                 },

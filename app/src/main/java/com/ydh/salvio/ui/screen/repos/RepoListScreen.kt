@@ -37,12 +37,14 @@ import com.ydh.salvio.viewmodel.AuthState
 import com.ydh.salvio.viewmodel.AuthViewModel
 import com.ydh.salvio.viewmodel.RepoListState
 import com.ydh.salvio.viewmodel.RepoViewModel
+import com.ydh.salvio.viewmodel.ThemeViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RepoListScreen(
     authViewModel: AuthViewModel,
     repoViewModel: RepoViewModel,
+    themeViewModel: ThemeViewModel,
     onRepoSelected: (owner: String, repo: String) -> Unit,
     onLogout: () -> Unit,
     onNavigateToNotifications: () -> Unit = {}
@@ -51,11 +53,12 @@ fun RepoListScreen(
     val repoState by repoViewModel.repoListState.collectAsState()
     val favorites by repoViewModel.favoriteRepos.collectAsState()
     val watchedRepos by repoViewModel.watchedRepos.collectAsState()
+    val themeMode by themeViewModel.themeMode.collectAsState()
     val user = (authState as? AuthState.Success)?.user
 
     var searchQuery by remember { mutableStateOf("") }
     var showFavoritesOnly by remember { mutableStateOf(false) }
-    var showLogoutDialog by remember { mutableStateOf(false) }
+    var showSettingsDialog by remember { mutableStateOf(false) }
     var pendingWatchRepoName by remember { mutableStateOf<String?>(null) }
 
     val notificationPermissionLauncher = rememberLauncherForActivityResult(
@@ -69,21 +72,16 @@ fun RepoListScreen(
 
     LaunchedEffect(Unit) { repoViewModel.loadRepos() }
 
-    if (showLogoutDialog) {
-        AlertDialog(
-            onDismissRequest = { showLogoutDialog = false },
-            title = { Text("로그아웃") },
-            text = { Text("정말 로그아웃 하시겠습니까?") },
-            confirmButton = {
-                TextButton(onClick = {
-                    showLogoutDialog = false
-                    authViewModel.logout()
-                    onLogout()
-                }) { Text("로그아웃", color = MaterialTheme.colorScheme.error) }
+    if (showSettingsDialog) {
+        SettingsDialog(
+            themeMode = themeMode,
+            onThemeModeChange = { themeViewModel.setThemeMode(it) },
+            onLogout = {
+                showSettingsDialog = false
+                authViewModel.logout()
+                onLogout()
             },
-            dismissButton = {
-                TextButton(onClick = { showLogoutDialog = false }) { Text("취소") }
-            }
+            onDismiss = { showSettingsDialog = false }
         )
     }
 
@@ -108,15 +106,15 @@ fun RepoListScreen(
                     user?.let {
                         AsyncImage(
                             model = it.avatarUrl,
-                            contentDescription = null,
+                            contentDescription = "설정",
                             modifier = Modifier
                                 .padding(end = Spacing.sm)
                                 .size(30.dp)
                                 .clip(CircleShape)
-                                .clickable { showLogoutDialog = true }
+                                .clickable { showSettingsDialog = true }
                         )
-                    } ?: IconButton(onClick = { showLogoutDialog = true }) {
-                        Icon(Icons.Outlined.AccountCircle, contentDescription = "로그아웃")
+                    } ?: IconButton(onClick = { showSettingsDialog = true }) {
+                        Icon(Icons.Outlined.AccountCircle, contentDescription = "설정")
                     }
                 }
             )
@@ -215,6 +213,84 @@ private fun ListLabel(text: String, top: androidx.compose.ui.unit.Dp = 0.dp) {
         color = SalvioTheme.colors.textSecondary,
         modifier = Modifier.padding(top = top, bottom = Spacing.xs)
     )
+}
+
+@Composable
+private fun SettingsDialog(
+    themeMode: ThemeMode,
+    onThemeModeChange: (ThemeMode) -> Unit,
+    onLogout: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("설정") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                Text(
+                    "테마",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = SalvioTheme.colors.textSecondary,
+                    modifier = Modifier.padding(bottom = Spacing.xs)
+                )
+                ThemeOptionRow("시스템 설정", Icons.Default.BrightnessAuto, themeMode == ThemeMode.SYSTEM) { onThemeModeChange(ThemeMode.SYSTEM) }
+                ThemeOptionRow("라이트", Icons.Default.LightMode, themeMode == ThemeMode.LIGHT) { onThemeModeChange(ThemeMode.LIGHT) }
+                ThemeOptionRow("다크", Icons.Default.DarkMode, themeMode == ThemeMode.DARK) { onThemeModeChange(ThemeMode.DARK) }
+
+                Spacer(modifier = Modifier.height(Spacing.sm))
+                HorizontalDivider(color = SalvioTheme.colors.borderMuted, thickness = 0.5.dp)
+                Spacer(modifier = Modifier.height(Spacing.sm))
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(Radius.button)
+                        .clickable { onLogout() }
+                        .padding(vertical = Spacing.md, horizontal = Spacing.sm),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.md)
+                ) {
+                    Icon(Icons.Default.Logout, contentDescription = null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp))
+                    Text("로그아웃", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.titleSmall)
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text("닫기") }
+        }
+    )
+}
+
+@Composable
+private fun ThemeOptionRow(
+    label: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(Radius.button)
+            .clickable { onClick() }
+            .padding(vertical = Spacing.sm, horizontal = Spacing.sm),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Spacing.md)
+    ) {
+        Icon(
+            icon,
+            contentDescription = null,
+            tint = if (selected) MaterialTheme.colorScheme.primary else SalvioTheme.colors.textSecondary,
+            modifier = Modifier.size(18.dp)
+        )
+        Text(
+            label,
+            modifier = Modifier.weight(1f),
+            color = MaterialTheme.colorScheme.onSurface,
+            style = MaterialTheme.typography.bodyLarge
+        )
+        RadioButton(selected = selected, onClick = onClick)
+    }
 }
 
 @Composable
