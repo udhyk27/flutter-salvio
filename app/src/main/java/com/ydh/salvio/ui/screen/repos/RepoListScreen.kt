@@ -122,28 +122,30 @@ fun RepoListScreen(
         containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->
         Column(modifier = Modifier.padding(paddingValues)) {
-            OutlinedTextField(
-                value = searchQuery,
-                onValueChange = { searchQuery = it },
-                placeholder = { Text("저장소 검색", color = SalvioTheme.colors.textSecondary) },
-                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = SalvioTheme.colors.textSecondary) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = Spacing.screen, vertical = Spacing.md),
-                shape = Radius.field,
-                colors = OutlinedTextFieldDefaults.colors(
-                    unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
-                    focusedBorderColor = MaterialTheme.colorScheme.primary
-                ),
-                singleLine = true,
-                trailingIcon = {
-                    if (searchQuery.isNotBlank()) {
-                        IconButton(onClick = { searchQuery = "" }) {
-                            Icon(Icons.Default.Clear, contentDescription = null, tint = SalvioTheme.colors.textSecondary)
+            val searchField: @Composable () -> Unit = {
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    placeholder = { Text("저장소 검색", color = SalvioTheme.colors.textSecondary) },
+                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = SalvioTheme.colors.textSecondary) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = Spacing.sm),
+                    shape = Radius.field,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
+                        focusedBorderColor = MaterialTheme.colorScheme.primary
+                    ),
+                    singleLine = true,
+                    trailingIcon = {
+                        if (searchQuery.isNotBlank()) {
+                            IconButton(onClick = { searchQuery = "" }) {
+                                Icon(Icons.Default.Clear, contentDescription = null, tint = SalvioTheme.colors.textSecondary)
+                            }
                         }
                     }
-                }
-            )
+                )
+            }
 
             when (val state = repoState) {
                 is RepoListState.Loading -> LoadingState()
@@ -161,13 +163,17 @@ fun RepoListScreen(
                     val (favRepos, otherRepos) = filtered.partition { favorites.contains(it.fullName) }
                     val sorted = favRepos + otherRepos
 
-                    if (sorted.isEmpty()) {
-                        EmptyState("저장소가 없습니다.", Icons.Default.FolderOff)
-                    } else {
-                        LazyColumn(
-                            contentPadding = PaddingValues(horizontal = Spacing.screen, vertical = Spacing.sm),
-                            verticalArrangement = Arrangement.spacedBy(Spacing.sm)
-                        ) {
+                    LazyColumn(
+                        contentPadding = PaddingValues(horizontal = Spacing.screen, vertical = Spacing.md),
+                        verticalArrangement = Arrangement.spacedBy(Spacing.sm)
+                    ) {
+                        item(key = "search") { searchField() }
+
+                        if (sorted.isEmpty()) {
+                            item(key = "empty") {
+                                EmptyState("저장소가 없습니다.", Icons.Default.FolderOff)
+                            }
+                        } else {
                             if (favRepos.isNotEmpty() && !showFavoritesOnly) {
                                 item { ListLabel("즐겨찾기") }
                             }

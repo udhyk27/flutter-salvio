@@ -57,7 +57,7 @@ fun LoginScreen(
             )
             Spacer(modifier = Modifier.height(Spacing.sm))
             Text(
-                text = "GitHub 프로젝트 모니터링",
+                text = "GitHub 모니터링",
                 style = MaterialTheme.typography.bodyMedium,
                 color = SalvioTheme.colors.textSecondary,
                 textAlign = TextAlign.Center

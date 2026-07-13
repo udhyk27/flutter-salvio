@@ -57,10 +57,13 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
                 onFailure = { e ->
                     val msg = when {
                         e.message?.contains("401") == true -> "토큰이 유효하지 않습니다."
-                        e.message?.contains("network", ignoreCase = true) == true ||
-                        e is java.net.UnknownHostException ||
-                        e is java.net.SocketTimeoutException -> "네트워크 연결을 확인하세요."
-                        else -> "인증에 실패했습니다. 다시 시도해주세요."
+                        e is java.net.UnknownHostException ->
+                            "GitHub 서버에 연결할 수 없습니다. 인터넷/DNS 연결을 확인하세요."
+                        e is java.net.SocketTimeoutException ->
+                            "연결 시간이 초과되었습니다. 네트워크 상태를 확인하세요."
+                        e.message?.contains("network", ignoreCase = true) == true ->
+                            "네트워크 연결을 확인하세요."
+                        else -> "인증에 실패했습니다. (${e.javaClass.simpleName}: ${e.message})"
                     }
                     _authState.value = AuthState.Error(msg)
                 }
