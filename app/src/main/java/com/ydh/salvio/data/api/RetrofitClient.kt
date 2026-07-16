@@ -40,4 +40,25 @@ object RetrofitClient {
             .build()
             .create(GitHubApi::class.java)
     }
+
+    /** OAuth Device Flow 용 클라이언트 (base URL 이 github.com, 인증 헤더 없음) */
+    fun createOAuth(): GitHubOAuthApi {
+        val loggingInterceptor = HttpLoggingInterceptor().apply {
+            level = if (BuildConfig.DEBUG) HttpLoggingInterceptor.Level.BODY
+                    else HttpLoggingInterceptor.Level.NONE
+        }
+
+        val client = OkHttpClient.Builder()
+            .addInterceptor(loggingInterceptor)
+            .connectTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
+            .readTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
+            .build()
+
+        return Retrofit.Builder()
+            .baseUrl("https://github.com/")
+            .client(client)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(GitHubOAuthApi::class.java)
+    }
 }

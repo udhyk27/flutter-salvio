@@ -17,6 +17,11 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        // GitHub OAuth Device Flow 용 Client ID.
+        // gradle.properties (또는 local.properties/환경변수)에 GITHUB_CLIENT_ID=Ov23li... 형태로 지정.
+        val githubClientId = (project.findProperty("GITHUB_CLIENT_ID") as String?) ?: ""
+        buildConfigField("String", "GITHUB_CLIENT_ID", "\"$githubClientId\"")
     }
 
     buildTypes {
