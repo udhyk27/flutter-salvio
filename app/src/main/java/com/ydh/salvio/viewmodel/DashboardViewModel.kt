@@ -4,10 +4,11 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.ydh.salvio.SalvioApplication
-import com.ydh.salvio.data.api.RetrofitClient
 import com.ydh.salvio.data.model.*
 import kotlinx.coroutines.flow.update
 import com.ydh.salvio.data.repository.GitHubRepository
+import com.ydh.salvio.util.httpCode
+import com.ydh.salvio.util.toUserMessage
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -113,7 +114,7 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
 
     private suspend fun getRepo(): GitHubRepository? {
         val token = dataStore.token.first() ?: return null
-        return GitHubRepository(RetrofitClient.create(token), app.database.cacheDao())
+        return app.githubRepository(token)
     }
 
     fun loadDashboard(owner: String, repoName: String) {
@@ -146,7 +147,7 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
                 openPrs = openPrs.await().getOrElse { emptyList() }.take(3),
                 branches = branches.await().getOrElse { emptyList() },
                 contributors = contributors.await().getOrElse { emptyList() },
-                error = repoInfo.await().exceptionOrNull()?.message
+                error = repoInfo.await().exceptionOrNull()?.toUserMessage("대시보드를 불러오지 못했습니다.")
             )
         }
     }
@@ -167,7 +168,7 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
                 openPrs = openList,
                 closedPrs = closedList.filter { it.mergedAt == null },
                 mergedPrs = closedList.filter { it.mergedAt != null },
-                error = open.await().exceptionOrNull()?.message
+                error = open.await().exceptionOrNull()?.toUserMessage("PR을 불러오지 못했습니다.")
             )
 
             // 리뷰 + CI 상태 비동기 로드
@@ -203,7 +204,7 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
                 isLoading = false,
                 openIssues = open.await().getOrElse { emptyList() },
                 closedIssues = closed.await().getOrElse { emptyList() },
-                error = open.await().exceptionOrNull()?.message
+                error = open.await().exceptionOrNull()?.toUserMessage("이슈를 불러오지 못했습니다.")
             )
         }
     }
@@ -214,7 +215,7 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
             val repo = getRepo() ?: return@launch
             repo.getReleases(owner, repoName).fold(
                 onSuccess = { _releaseState.value = ReleaseUiState(releases = it) },
-                onFailure = { _releaseState.value = ReleaseUiState(error = it.message) }
+                onFailure = { _releaseState.value = ReleaseUiState(error = it.toUserMessage("릴리스를 불러오지 못했습니다.")) }
             )
         }
     }
@@ -247,7 +248,7 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
             val repo = getRepo() ?: return@launch
             repo.getCommitDetail(owner, repoName, sha).fold(
                 onSuccess = { _commitDetailState.value = CommitDetailUiState(detail = it) },
-                onFailure = { _commitDetailState.value = CommitDetailUiState(error = it.message) }
+                onFailure = { _commitDetailState.value = CommitDetailUiState(error = it.toUserMessage("커밋 정보를 불러오지 못했습니다.")) }
             )
         }
     }
@@ -265,7 +266,7 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
             val trafficClones = async { repo.getTrafficClones(owner, repoName) }
 
             val trafficViewsResult = trafficViews.await()
-            val trafficAccessDenied = trafficViewsResult.exceptionOrNull()?.message?.contains("403") == true
+            val trafficAccessDenied = trafficViewsResult.exceptionOrNull()?.httpCode() == 403
 
             _statsState.value = StatsUiState(
                 isLoading = false,
@@ -276,7 +277,7 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
                 trafficViews = trafficViewsResult.getOrNull(),
                 trafficClones = trafficClones.await().getOrNull(),
                 trafficAccessDenied = trafficAccessDenied,
-                error = contributors.await().exceptionOrNull()?.message
+                error = contributors.await().exceptionOrNull()?.toUserMessage("통계를 불러오지 못했습니다.")
             )
         }
     }
@@ -289,10 +290,10 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
             repo.searchCode(owner, repoName, query).fold(
                 onSuccess = { _searchState.value = SearchUiState(results = it, query = query) },
                 onFailure = {
-                    val msg = when {
-                        it.message?.contains("403") == true -> "검색 권한이 없습니다."
-                        it.message?.contains("422") == true -> "검색어를 다시 확인해주세요."
-                        else -> "검색에 실패했습니다."
+                    val msg = when (it.httpCode()) {
+                        403 -> "검색 권한이 없습니다."
+                        422 -> "검색어를 다시 확인해주세요."
+                        else -> it.toUserMessage("검색에 실패했습니다.")
                     }
                     _searchState.value = SearchUiState(error = msg, query = query)
                 }

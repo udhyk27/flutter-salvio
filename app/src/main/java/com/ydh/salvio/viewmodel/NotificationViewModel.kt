@@ -4,9 +4,9 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.ydh.salvio.SalvioApplication
-import com.ydh.salvio.data.api.RetrofitClient
 import com.ydh.salvio.data.model.GitHubNotification
 import com.ydh.salvio.data.repository.GitHubRepository
+import com.ydh.salvio.util.toUserMessage
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -21,14 +21,15 @@ data class NotificationUiState(
 
 class NotificationViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val dataStore = (application as SalvioApplication).tokenDataStore
+    private val app = application as SalvioApplication
+    private val dataStore = app.tokenDataStore
 
     private val _state = MutableStateFlow(NotificationUiState())
     val state: StateFlow<NotificationUiState> = _state.asStateFlow()
 
     private suspend fun getRepo(): GitHubRepository? {
         val token = dataStore.token.first() ?: return null
-        return GitHubRepository(RetrofitClient.create(token))
+        return app.githubRepository(token)
     }
 
     fun load() {
@@ -37,7 +38,7 @@ class NotificationViewModel(application: Application) : AndroidViewModel(applica
             val repo = getRepo() ?: return@launch
             repo.getNotifications().fold(
                 onSuccess = { _state.value = NotificationUiState(notifications = it) },
-                onFailure = { _state.value = NotificationUiState(error = it.message) }
+                onFailure = { _state.value = NotificationUiState(error = it.toUserMessage("알림을 불러오지 못했습니다.")) }
             )
         }
     }

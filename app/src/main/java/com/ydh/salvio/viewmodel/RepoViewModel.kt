@@ -4,10 +4,9 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.ydh.salvio.SalvioApplication
-import com.ydh.salvio.data.api.RetrofitClient
 import com.ydh.salvio.data.model.GitHubRepo
-import com.ydh.salvio.data.repository.GitHubRepository
 import com.ydh.salvio.data.worker.PrCheckWorker
+import com.ydh.salvio.util.toUserMessage
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
@@ -39,11 +38,10 @@ class RepoViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             _repoListState.value = RepoListState.Loading
             val token = dataStore.token.first() ?: return@launch
-            val api = RetrofitClient.create(token)
-            val repo = GitHubRepository(api, app.database.cacheDao())
+            val repo = app.githubRepository(token)
             repo.getUserRepos().fold(
                 onSuccess = { repos -> _repoListState.value = RepoListState.Success(repos) },
-                onFailure = { e -> _repoListState.value = RepoListState.Error(e.message ?: "조회 실패") }
+                onFailure = { e -> _repoListState.value = RepoListState.Error(e.toUserMessage("조회에 실패했습니다.")) }
             )
         }
     }

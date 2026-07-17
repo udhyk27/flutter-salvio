@@ -7,7 +7,8 @@ import com.ydh.salvio.BuildConfig
 import com.ydh.salvio.SalvioApplication
 import com.ydh.salvio.data.api.RetrofitClient
 import com.ydh.salvio.data.model.GitHubUser
-import com.ydh.salvio.data.repository.GitHubRepository
+import com.ydh.salvio.util.httpCode
+import com.ydh.salvio.util.toUserMessage
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -36,7 +37,8 @@ sealed class DeviceFlowState {
 
 class AuthViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val dataStore = (application as SalvioApplication).tokenDataStore
+    private val app = application as SalvioApplication
+    private val dataStore = app.tokenDataStore
 
     private val _authState = MutableStateFlow<AuthState>(AuthState.Idle)
     val authState: StateFlow<AuthState> = _authState.asStateFlow()
@@ -65,8 +67,7 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
     fun loginWithToken(token: String) {
         viewModelScope.launch {
             _authState.value = AuthState.Loading
-            val api = RetrofitClient.create(token)
-            val repo = GitHubRepository(api)
+            val repo = app.githubRepository(token)
             repo.getUser().fold(
                 onSuccess = { user ->
                     dataStore.saveToken(token)
@@ -74,15 +75,11 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
                     _authState.value = AuthState.Success(user)
                 },
                 onFailure = { e ->
-                    val msg = when {
-                        e.message?.contains("401") == true -> "토큰이 유효하지 않습니다."
-                        e is java.net.UnknownHostException ->
-                            "GitHub 서버에 연결할 수 없습니다. 인터넷/DNS 연결을 확인하세요."
-                        e is java.net.SocketTimeoutException ->
-                            "연결 시간이 초과되었습니다. 네트워크 상태를 확인하세요."
-                        e.message?.contains("network", ignoreCase = true) == true ->
-                            "네트워크 연결을 확인하세요."
-                        else -> "인증에 실패했습니다. (${e.javaClass.simpleName}: ${e.message})"
+                    // 로그인 단계의 401은 "만료"가 아니라 토큰/권한 문제로 안내
+                    val msg = if (e.httpCode() == 401) {
+                        "토큰이 유효하지 않습니다. 토큰과 권한(scope)을 확인하세요."
+                    } else {
+                        e.toUserMessage("인증에 실패했습니다.")
                     }
                     _authState.value = AuthState.Error(msg)
                 }

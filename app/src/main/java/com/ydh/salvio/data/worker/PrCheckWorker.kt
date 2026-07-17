@@ -5,10 +5,8 @@ import android.app.NotificationManager
 import android.content.Context
 import androidx.core.app.NotificationCompat
 import androidx.work.*
-import com.ydh.salvio.data.api.RetrofitClient
-import com.ydh.salvio.data.local.AppDatabase
+import com.ydh.salvio.SalvioApplication
 import com.ydh.salvio.data.local.TokenDataStore
-import com.ydh.salvio.data.repository.GitHubRepository
 import kotlinx.coroutines.flow.first
 import java.util.concurrent.TimeUnit
 
@@ -23,8 +21,7 @@ class PrCheckWorker(
         val watchedRepos = dataStore.watchedRepos.first()
         if (watchedRepos.isEmpty()) return Result.success()
 
-        val dao = AppDatabase.getInstance(context).cacheDao()
-        val repo = GitHubRepository(RetrofitClient.create(token), dao)
+        val repo = (context.applicationContext as SalvioApplication).githubRepository(token)
 
         watchedRepos.forEach { fullName ->
             val parts = fullName.split("/")
