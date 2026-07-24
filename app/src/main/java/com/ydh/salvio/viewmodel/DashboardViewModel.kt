@@ -225,7 +225,8 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
             _branchState.value = BranchUiState(isLoading = true)
             val repo = getRepo() ?: return@launch
 
-            val branches = repo.getBranches(owner, repoName).getOrElse { emptyList() }
+            val branchesResult = repo.getBranches(owner, repoName)
+            val branches = branchesResult.getOrElse { emptyList() }
             val commitMap = mutableMapOf<String, GitHubCommit>()
 
             branches.forEach { branch ->
@@ -237,7 +238,8 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
             _branchState.value = BranchUiState(
                 isLoading = false,
                 branches = branches,
-                branchCommits = commitMap
+                branchCommits = commitMap,
+                error = branchesResult.exceptionOrNull()?.toUserMessage("브랜치 목록을 불러오지 못했습니다.")
             )
         }
     }

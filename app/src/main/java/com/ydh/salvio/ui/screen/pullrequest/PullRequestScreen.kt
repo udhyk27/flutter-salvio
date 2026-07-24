@@ -100,7 +100,7 @@ fun PullRequestScreen(
             when {
                 state.isLoading && state.openPrs.isEmpty() -> LoadingState()
                 state.error != null && state.openPrs.isEmpty() && state.mergedPrs.isEmpty() && state.closedPrs.isEmpty() ->
-                    ErrorState("PR 목록을 불러오지 못했습니다.", onRetry = { dashboardViewModel.loadPullRequests(owner, repoName) })
+                    ErrorState(state.error ?: "PR 목록을 불러오지 못했습니다.", onRetry = { dashboardViewModel.loadPullRequests(owner, repoName) })
                 else -> {
                     val prs = when (selectedTab) {
                         0 -> state.openPrs

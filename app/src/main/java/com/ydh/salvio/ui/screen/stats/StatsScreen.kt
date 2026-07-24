@@ -63,7 +63,7 @@ fun StatsScreen(
         when {
             state.isLoading && state.contributors.isEmpty() -> LoadingState(Modifier.padding(paddingValues))
             state.error != null && state.contributors.isEmpty() ->
-                ErrorState("통계를 불러오지 못했습니다.", { dashboardViewModel.loadStats(owner, repoName) }, Modifier.padding(paddingValues))
+                ErrorState(state.error ?: "통계를 불러오지 못했습니다.", { dashboardViewModel.loadStats(owner, repoName) }, Modifier.padding(paddingValues))
             else -> {
                 PullToRefreshBox(
                     isRefreshing = state.isLoading,

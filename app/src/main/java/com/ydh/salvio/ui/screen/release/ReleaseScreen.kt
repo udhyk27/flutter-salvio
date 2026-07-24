@@ -68,7 +68,7 @@ fun ReleaseScreen(
         when {
             state.isLoading && state.releases.isEmpty() -> LoadingState(Modifier.padding(paddingValues))
             state.error != null && state.releases.isEmpty() ->
-                ErrorState("릴리즈 목록을 불러오지 못했습니다.", { dashboardViewModel.loadReleases(owner, repoName) }, Modifier.padding(paddingValues))
+                ErrorState(state.error ?: "릴리즈 목록을 불러오지 못했습니다.", { dashboardViewModel.loadReleases(owner, repoName) }, Modifier.padding(paddingValues))
             else -> PullToRefreshBox(
                 isRefreshing = state.isLoading,
                 onRefresh = { dashboardViewModel.loadReleases(owner, repoName) },

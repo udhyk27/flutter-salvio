@@ -88,7 +88,7 @@ fun NotificationScreen(
     ) { paddingValues ->
         when {
             state.isLoading -> LoadingState(Modifier.padding(paddingValues))
-            state.error != null -> ErrorState("알림을 불러오지 못했습니다.", { notificationViewModel.load() }, Modifier.padding(paddingValues))
+            state.error != null -> ErrorState(state.error!!, { notificationViewModel.load() }, Modifier.padding(paddingValues))
             state.notifications.isEmpty() -> EmptyState("읽지 않은 알림이 없습니다.", Icons.Default.NotificationsNone, Modifier.padding(paddingValues))
             else -> LazyColumn(
                 modifier = Modifier.padding(paddingValues),

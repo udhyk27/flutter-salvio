@@ -93,7 +93,7 @@ fun IssueScreen(
             when {
                 state.isLoading && state.openIssues.isEmpty() && state.closedIssues.isEmpty() -> LoadingState()
                 state.error != null && state.openIssues.isEmpty() && state.closedIssues.isEmpty() ->
-                    ErrorState("이슈 목록을 불러오지 못했습니다.", onRetry = { dashboardViewModel.loadIssues(owner, repoName) })
+                    ErrorState(state.error ?: "이슈 목록을 불러오지 못했습니다.", onRetry = { dashboardViewModel.loadIssues(owner, repoName) })
                 else -> {
                     val issues = if (selectedTab == 0) state.openIssues else state.closedIssues
 

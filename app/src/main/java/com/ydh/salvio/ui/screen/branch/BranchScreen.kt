@@ -64,7 +64,7 @@ fun BranchScreen(
         when {
             state.isLoading && state.branches.isEmpty() -> LoadingState(Modifier.padding(paddingValues))
             state.error != null && state.branches.isEmpty() ->
-                ErrorState("브랜치 목록을 불러오지 못했습니다.", { dashboardViewModel.loadBranches(owner, repoName) }, Modifier.padding(paddingValues))
+                ErrorState(state.error ?: "브랜치 목록을 불러오지 못했습니다.", { dashboardViewModel.loadBranches(owner, repoName) }, Modifier.padding(paddingValues))
             else -> {
                 PullToRefreshBox(
                     isRefreshing = state.isLoading,

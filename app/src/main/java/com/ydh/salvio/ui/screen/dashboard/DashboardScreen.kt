@@ -85,7 +85,7 @@ fun DashboardScreen(
         }
 
         if (state.error != null && state.stats == null) {
-            ErrorState("데이터를 불러오지 못했습니다.", { dashboardViewModel.loadDashboard(owner, repoName) }, Modifier.padding(paddingValues))
+            ErrorState(state.error ?: "데이터를 불러오지 못했습니다.", { dashboardViewModel.loadDashboard(owner, repoName) }, Modifier.padding(paddingValues))
             return@Scaffold
         }
 
@@ -99,7 +99,7 @@ fun DashboardScreen(
                 verticalArrangement = Arrangement.spacedBy(Spacing.md)
             ) {
                 if (state.error != null && state.stats != null) {
-                    item { RefreshErrorBanner() }
+                    item { RefreshErrorBanner(state.error) }
                 }
                 item { StatsRow(state, onNavigateToPRs, onNavigateToBranches) }
                 item { QuickActionsRow(onNavigateToPRs, onNavigateToBranches, onNavigateToStats, onNavigateToIssues, onNavigateToReleases) }
@@ -112,7 +112,7 @@ fun DashboardScreen(
 }
 
 @Composable
-private fun RefreshErrorBanner() {
+private fun RefreshErrorBanner(message: String) {
     Surface(
         shape = Radius.button,
         color = SalvioTheme.colors.danger.copy(alpha = 0.1f)
@@ -123,7 +123,7 @@ private fun RefreshErrorBanner() {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(Icons.Default.ErrorOutline, contentDescription = null, tint = SalvioTheme.colors.danger, modifier = Modifier.size(16.dp))
-            Text("일부 데이터를 불러오지 못했습니다.", fontSize = 13.sp, color = SalvioTheme.colors.danger)
+            Text(message, fontSize = 13.sp, color = SalvioTheme.colors.danger)
         }
     }
 }

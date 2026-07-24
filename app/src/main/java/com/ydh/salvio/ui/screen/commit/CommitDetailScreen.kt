@@ -70,7 +70,7 @@ fun CommitDetailScreen(
         when {
             state.isLoading -> LoadingState(Modifier.padding(paddingValues))
             state.error != null ->
-                ErrorState("커밋 정보를 불러오지 못했습니다.", { dashboardViewModel.loadCommitDetail(owner, repoName, sha) }, Modifier.padding(paddingValues))
+                ErrorState(state.error!!, { dashboardViewModel.loadCommitDetail(owner, repoName, sha) }, Modifier.padding(paddingValues))
             state.detail != null -> CommitDetailContent(
                 detail = state.detail!!,
                 modifier = Modifier.padding(paddingValues)
