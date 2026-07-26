@@ -98,8 +98,9 @@ fun DashboardScreen(
                 contentPadding = PaddingValues(Spacing.screen),
                 verticalArrangement = Arrangement.spacedBy(Spacing.md)
             ) {
-                if (state.error != null && state.stats != null) {
-                    item { RefreshErrorBanner(state.error) }
+                val bannerError = state.error
+                if (bannerError != null && state.stats != null) {
+                    item { RefreshErrorBanner(bannerError) }
                 }
                 item { StatsRow(state, onNavigateToPRs, onNavigateToBranches) }
                 item { QuickActionsRow(onNavigateToPRs, onNavigateToBranches, onNavigateToStats, onNavigateToIssues, onNavigateToReleases) }
