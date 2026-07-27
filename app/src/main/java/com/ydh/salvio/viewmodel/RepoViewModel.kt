@@ -34,12 +34,15 @@ class RepoViewModel(application: Application) : AndroidViewModel(application) {
     val watchedRepos: StateFlow<List<String>> = dataStore.watchedRepos
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
-    fun loadRepos() {
+    fun loadRepos(forceRefresh: Boolean = false) {
         viewModelScope.launch {
             _repoListState.value = RepoListState.Loading
-            val token = dataStore.token.first() ?: return@launch
+            val token = dataStore.token.first() ?: run {
+                _repoListState.value = RepoListState.Error("로그인이 필요합니다. 다시 로그인해 주세요.")
+                return@launch
+            }
             val repo = app.githubRepository(token)
-            repo.getUserRepos().fold(
+            repo.getUserRepos(forceRefresh).fold(
                 onSuccess = { repos -> _repoListState.value = RepoListState.Success(repos) },
                 onFailure = { e -> _repoListState.value = RepoListState.Error(e.toUserMessage("조회에 실패했습니다.")) }
             )

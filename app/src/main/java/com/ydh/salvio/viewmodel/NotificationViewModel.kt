@@ -35,7 +35,10 @@ class NotificationViewModel(application: Application) : AndroidViewModel(applica
     fun load() {
         viewModelScope.launch {
             _state.value = NotificationUiState(isLoading = true)
-            val repo = getRepo() ?: return@launch
+            val repo = getRepo() ?: run {
+                _state.value = NotificationUiState(error = "로그인이 필요합니다. 다시 로그인해 주세요.")
+                return@launch
+            }
             repo.getNotifications().fold(
                 onSuccess = { _state.value = NotificationUiState(notifications = it) },
                 onFailure = { _state.value = NotificationUiState(error = it.toUserMessage("알림을 불러오지 못했습니다.")) }

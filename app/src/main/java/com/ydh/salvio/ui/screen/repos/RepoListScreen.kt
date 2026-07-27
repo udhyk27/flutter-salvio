@@ -100,7 +100,7 @@ fun RepoListScreen(
                             tint = if (showFavoritesOnly) SalvioTheme.colors.attention else SalvioTheme.colors.textSecondary
                         )
                     }
-                    IconButton(onClick = { repoViewModel.loadRepos() }) {
+                    IconButton(onClick = { repoViewModel.loadRepos(forceRefresh = true) }) {
                         Icon(Icons.Default.Refresh, contentDescription = "새로고침")
                     }
                     user?.let {
@@ -149,7 +149,7 @@ fun RepoListScreen(
 
             when (val state = repoState) {
                 is RepoListState.Loading -> LoadingState()
-                is RepoListState.Error -> ErrorState(state.message, onRetry = { repoViewModel.loadRepos() })
+                is RepoListState.Error -> ErrorState(state.message, onRetry = { repoViewModel.loadRepos(forceRefresh = true) })
                 is RepoListState.Success -> {
                     val allRepos = state.repos
                     val filtered = allRepos.filter {

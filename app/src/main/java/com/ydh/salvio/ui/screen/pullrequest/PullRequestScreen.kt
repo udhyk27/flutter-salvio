@@ -59,7 +59,7 @@ fun PullRequestScreen(
                     IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, contentDescription = "뒤로") }
                 },
                 actions = {
-                    IconButton(onClick = { dashboardViewModel.loadPullRequests(owner, repoName) }) {
+                    IconButton(onClick = { dashboardViewModel.loadPullRequests(owner, repoName, forceRefresh = true) }) {
                         Icon(Icons.Default.Refresh, contentDescription = "새로고침")
                     }
                 }
@@ -100,7 +100,7 @@ fun PullRequestScreen(
             when {
                 state.isLoading && state.openPrs.isEmpty() -> LoadingState()
                 state.error != null && state.openPrs.isEmpty() && state.mergedPrs.isEmpty() && state.closedPrs.isEmpty() ->
-                    ErrorState(state.error ?: "PR 목록을 불러오지 못했습니다.", onRetry = { dashboardViewModel.loadPullRequests(owner, repoName) })
+                    ErrorState(state.error ?: "PR 목록을 불러오지 못했습니다.", onRetry = { dashboardViewModel.loadPullRequests(owner, repoName, forceRefresh = true) })
                 else -> {
                     val prs = when (selectedTab) {
                         0 -> state.openPrs
@@ -116,7 +116,7 @@ fun PullRequestScreen(
 
                     PullToRefreshBox(
                         isRefreshing = state.isLoading,
-                        onRefresh = { dashboardViewModel.loadPullRequests(owner, repoName) }
+                        onRefresh = { dashboardViewModel.loadPullRequests(owner, repoName, forceRefresh = true) }
                     ) {
                         if (prs.isEmpty()) {
                             EmptyState("${tabs[selectedTab]} PR이 없습니다.", Icons.Default.MergeType)

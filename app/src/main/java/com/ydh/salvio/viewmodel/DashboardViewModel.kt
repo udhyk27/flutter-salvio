@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.update
 import com.ydh.salvio.data.repository.GitHubRepository
 import com.ydh.salvio.util.httpCode
 import com.ydh.salvio.util.toUserMessage
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -112,120 +113,167 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
     private val _releaseState = MutableStateFlow(ReleaseUiState())
     val releaseState: StateFlow<ReleaseUiState> = _releaseState.asStateFlow()
 
+    private var prDetailsJob: Job? = null
+
     private suspend fun getRepo(): GitHubRepository? {
         val token = dataStore.token.first() ?: return null
         return app.githubRepository(token)
     }
 
-    fun loadDashboard(owner: String, repoName: String) {
+    fun loadDashboard(owner: String, repoName: String, forceRefresh: Boolean = false) {
         viewModelScope.launch {
             _dashboardState.value = _dashboardState.value.copy(isLoading = true, error = null)
-            val repo = getRepo() ?: return@launch
+            val repo = getRepo() ?: run {
+                _dashboardState.value = _dashboardState.value.copy(isLoading = false, error = NO_TOKEN_MSG)
+                return@launch
+            }
 
-            val repoInfo = async { repo.getRepo(owner, repoName) }
-            val commits = async { repo.getCommits(owner, repoName) }
-            val openPrs = async { repo.getPullRequests(owner, repoName, "open") }
-            val branches = async { repo.getBranches(owner, repoName) }
+            val repoInfo = async { repo.getRepo(owner, repoName, forceRefresh) }
+            val commits = async { repo.getCommits(owner, repoName, forceRefresh = forceRefresh) }
+            val openPrs = async { repo.getPullRequests(owner, repoName, "open", forceRefresh) }
+            val branches = async { repo.getBranches(owner, repoName, forceRefresh) }
             val contributors = async { repo.getContributors(owner, repoName) }
-            val closedPrs = async { repo.getPullRequests(owner, repoName, "closed") }
+            val closedPrs = async { repo.getPullRequests(owner, repoName, "closed", forceRefresh) }
 
-            val closedList = closedPrs.await().getOrElse { emptyList() }
+            val repoInfoResult = repoInfo.await()
+            val commitsResult = commits.await()
+            val openPrsResult = openPrs.await()
+            val branchesResult = branches.await()
+            val contributorsResult = contributors.await()
+            val closedResult = closedPrs.await()
+            val closedList = closedResult.getOrElse { emptyList() }
+
+            // 여러 호출 중 하나라도 실패하면 그 메시지를 노출한다.
+            // (부분 실패를 "정상 0" 으로 숨기지 않기 위함)
+            val firstError = listOf(
+                repoInfoResult, commitsResult, openPrsResult,
+                branchesResult, contributorsResult, closedResult
+            ).firstNotNullOfOrNull { it.exceptionOrNull() }
 
             _dashboardState.value = DashboardUiState(
                 isLoading = false,
-                repo = repoInfo.await().getOrNull(),
-                stats = GitHubRepoStats(
+                repo = repoInfoResult.getOrNull(),
+                // 핵심 저장소 정보 조회 자체가 실패하면 통계는 신뢰할 수 없으므로 null
+                // → 화면이 전체 에러 상태를 보여주도록 한다.
+                stats = if (repoInfoResult.isSuccess) GitHubRepoStats(
                     repoFullName = "$owner/$repoName",
-                    commitCount = commits.await().getOrElse { emptyList() }.size,
-                    openPrCount = openPrs.await().getOrElse { emptyList() }.size,
+                    commitCount = commitsResult.getOrElse { emptyList() }.size,
+                    openPrCount = openPrsResult.getOrElse { emptyList() }.size,
                     mergedPrCount = closedList.count { it.mergedAt != null },
                     closedPrCount = closedList.count { it.mergedAt == null },
-                    branchCount = branches.await().getOrElse { emptyList() }.size,
-                    contributorCount = contributors.await().getOrElse { emptyList() }.size
-                ),
-                recentCommits = commits.await().getOrElse { emptyList() }.take(5),
-                openPrs = openPrs.await().getOrElse { emptyList() }.take(3),
-                branches = branches.await().getOrElse { emptyList() },
-                contributors = contributors.await().getOrElse { emptyList() },
-                error = repoInfo.await().exceptionOrNull()?.toUserMessage("대시보드를 불러오지 못했습니다.")
+                    branchCount = branchesResult.getOrElse { emptyList() }.size,
+                    contributorCount = contributorsResult.getOrElse { emptyList() }.size
+                ) else null,
+                recentCommits = commitsResult.getOrElse { emptyList() }.take(5),
+                openPrs = openPrsResult.getOrElse { emptyList() }.take(3),
+                branches = branchesResult.getOrElse { emptyList() },
+                contributors = contributorsResult.getOrElse { emptyList() },
+                error = firstError?.toUserMessage("대시보드를 불러오지 못했습니다.")
             )
         }
     }
 
-    fun loadPullRequests(owner: String, repoName: String) {
+    fun loadPullRequests(owner: String, repoName: String, forceRefresh: Boolean = false) {
         viewModelScope.launch {
             _prState.value = PrUiState(isLoading = true)
-            val repo = getRepo() ?: return@launch
+            val repo = getRepo() ?: run {
+                _prState.value = PrUiState(error = NO_TOKEN_MSG)
+                return@launch
+            }
 
-            val open = async { repo.getPullRequests(owner, repoName, "open") }
-            val closed = async { repo.getPullRequests(owner, repoName, "closed") }
+            val open = async { repo.getPullRequests(owner, repoName, "open", forceRefresh) }
+            val closed = async { repo.getPullRequests(owner, repoName, "closed", forceRefresh) }
 
-            val openList = open.await().getOrElse { emptyList() }
-            val closedList = closed.await().getOrElse { emptyList() }
+            val openResult = open.await()
+            val closedResult = closed.await()
+            val openList = openResult.getOrElse { emptyList() }
+            val closedList = closedResult.getOrElse { emptyList() }
 
             _prState.value = _prState.value.copy(
                 isLoading = false,
                 openPrs = openList,
                 closedPrs = closedList.filter { it.mergedAt == null },
                 mergedPrs = closedList.filter { it.mergedAt != null },
-                error = open.await().exceptionOrNull()?.toUserMessage("PR을 불러오지 못했습니다.")
+                error = listOf(openResult, closedResult)
+                    .firstNotNullOfOrNull { it.exceptionOrNull() }
+                    ?.toUserMessage("PR을 불러오지 못했습니다.")
             )
 
             // 리뷰 + CI 상태 비동기 로드
-            loadPrDetails(owner, repoName, openList)
+            loadPrDetails(owner, repoName, openList, forceRefresh)
         }
     }
 
-    private fun loadPrDetails(owner: String, repoName: String, prs: List<GitHubPullRequest>) {
-        viewModelScope.launch {
+    private fun loadPrDetails(
+        owner: String,
+        repoName: String,
+        prs: List<GitHubPullRequest>,
+        forceRefresh: Boolean
+    ) {
+        // 이전 상세 로드를 취소해 오래된 응답이 최신 목록을 덮어쓰지 않도록 한다.
+        prDetailsJob?.cancel()
+        prDetailsJob = viewModelScope.launch {
             val repo = getRepo() ?: return@launch
             val reviewMap = mutableMapOf<Int, List<GitHubPrReview>>()
             val checkRunMap = mutableMapOf<Int, CheckRunsResponse>()
 
             prs.take(20).forEach { pr ->
-                repo.getPrReviews(owner, repoName, pr.number).getOrNull()?.let { reviews ->
+                repo.getPrReviews(owner, repoName, pr.number, forceRefresh).getOrNull()?.let { reviews ->
                     reviewMap[pr.number] = reviews
                 }
-                repo.getCheckRuns(owner, repoName, pr.head.sha).getOrNull()?.let { runs ->
+                repo.getCheckRuns(owner, repoName, pr.head.sha, forceRefresh).getOrNull()?.let { runs ->
                     checkRunMap[pr.number] = runs
                 }
-                _prState.value = _prState.value.copy(prReviews = reviewMap.toMap(), prCheckRuns = checkRunMap.toMap())
+                _prState.update { it.copy(prReviews = reviewMap.toMap(), prCheckRuns = checkRunMap.toMap()) }
             }
         }
     }
 
-    fun loadIssues(owner: String, repoName: String) {
+    fun loadIssues(owner: String, repoName: String, forceRefresh: Boolean = false) {
         viewModelScope.launch {
             _issueState.value = IssueUiState(isLoading = true)
-            val repo = getRepo() ?: return@launch
-            val open = async { repo.getIssues(owner, repoName, "open") }
-            val closed = async { repo.getIssues(owner, repoName, "closed") }
+            val repo = getRepo() ?: run {
+                _issueState.value = IssueUiState(error = NO_TOKEN_MSG)
+                return@launch
+            }
+            val open = async { repo.getIssues(owner, repoName, "open", forceRefresh) }
+            val closed = async { repo.getIssues(owner, repoName, "closed", forceRefresh) }
+            val openResult = open.await()
+            val closedResult = closed.await()
             _issueState.value = IssueUiState(
                 isLoading = false,
-                openIssues = open.await().getOrElse { emptyList() },
-                closedIssues = closed.await().getOrElse { emptyList() },
-                error = open.await().exceptionOrNull()?.toUserMessage("이슈를 불러오지 못했습니다.")
+                openIssues = openResult.getOrElse { emptyList() },
+                closedIssues = closedResult.getOrElse { emptyList() },
+                error = listOf(openResult, closedResult)
+                    .firstNotNullOfOrNull { it.exceptionOrNull() }
+                    ?.toUserMessage("이슈를 불러오지 못했습니다.")
             )
         }
     }
 
-    fun loadReleases(owner: String, repoName: String) {
+    fun loadReleases(owner: String, repoName: String, forceRefresh: Boolean = false) {
         viewModelScope.launch {
             _releaseState.value = ReleaseUiState(isLoading = true)
-            val repo = getRepo() ?: return@launch
-            repo.getReleases(owner, repoName).fold(
+            val repo = getRepo() ?: run {
+                _releaseState.value = ReleaseUiState(error = NO_TOKEN_MSG)
+                return@launch
+            }
+            repo.getReleases(owner, repoName, forceRefresh).fold(
                 onSuccess = { _releaseState.value = ReleaseUiState(releases = it) },
                 onFailure = { _releaseState.value = ReleaseUiState(error = it.toUserMessage("릴리스를 불러오지 못했습니다.")) }
             )
         }
     }
 
-    fun loadBranches(owner: String, repoName: String) {
+    fun loadBranches(owner: String, repoName: String, forceRefresh: Boolean = false) {
         viewModelScope.launch {
             _branchState.value = BranchUiState(isLoading = true)
-            val repo = getRepo() ?: return@launch
+            val repo = getRepo() ?: run {
+                _branchState.value = BranchUiState(error = NO_TOKEN_MSG)
+                return@launch
+            }
 
-            val branchesResult = repo.getBranches(owner, repoName)
+            val branchesResult = repo.getBranches(owner, repoName, forceRefresh)
             val branches = branchesResult.getOrElse { emptyList() }
             val commitMap = mutableMapOf<String, GitHubCommit>()
 
@@ -247,7 +295,10 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
     fun loadCommitDetail(owner: String, repoName: String, sha: String) {
         viewModelScope.launch {
             _commitDetailState.value = CommitDetailUiState(isLoading = true)
-            val repo = getRepo() ?: return@launch
+            val repo = getRepo() ?: run {
+                _commitDetailState.value = CommitDetailUiState(error = NO_TOKEN_MSG)
+                return@launch
+            }
             repo.getCommitDetail(owner, repoName, sha).fold(
                 onSuccess = { _commitDetailState.value = CommitDetailUiState(detail = it) },
                 onFailure = { _commitDetailState.value = CommitDetailUiState(error = it.toUserMessage("커밋 정보를 불러오지 못했습니다.")) }
@@ -255,31 +306,47 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
-    fun loadStats(owner: String, repoName: String) {
+    fun loadStats(owner: String, repoName: String, forceRefresh: Boolean = false) {
         viewModelScope.launch {
             _statsState.value = StatsUiState(isLoading = true)
-            val repo = getRepo() ?: return@launch
+            val repo = getRepo() ?: run {
+                _statsState.value = StatsUiState(error = NO_TOKEN_MSG)
+                return@launch
+            }
 
             val contributors = async { repo.getContributors(owner, repoName) }
-            val commits = async { repo.getCommits(owner, repoName, 1) }
-            val activity = async { repo.getCommitActivity(owner, repoName) }
-            val weeklyStats = async { repo.getContributorStats(owner, repoName) }
-            val trafficViews = async { repo.getTrafficViews(owner, repoName) }
-            val trafficClones = async { repo.getTrafficClones(owner, repoName) }
+            val commits = async { repo.getCommits(owner, repoName, 1, forceRefresh) }
+            val activity = async { repo.getCommitActivity(owner, repoName, forceRefresh) }
+            val weeklyStats = async { repo.getContributorStats(owner, repoName, forceRefresh) }
+            val trafficViews = async { repo.getTrafficViews(owner, repoName, forceRefresh) }
+            val trafficClones = async { repo.getTrafficClones(owner, repoName, forceRefresh) }
 
+            val contributorsResult = contributors.await()
+            val commitsResult = commits.await()
+            val activityResult = activity.await()
+            val weeklyStatsResult = weeklyStats.await()
             val trafficViewsResult = trafficViews.await()
-            val trafficAccessDenied = trafficViewsResult.exceptionOrNull()?.httpCode() == 403
+            val trafficClonesResult = trafficClones.await()
+
+            // 트래픽은 저장소 관리자만 접근 가능(403). 이는 정상적인 권한 제한이므로
+            // 일반 에러로 취급하지 않고 별도 플래그로만 표시한다.
+            val trafficAccessDenied = trafficViewsResult.exceptionOrNull()?.httpCode() == 403 ||
+                trafficClonesResult.exceptionOrNull()?.httpCode() == 403
+
+            // 트래픽(403 권한 제한)을 제외한 핵심 통계 호출들에서 에러를 집계한다.
+            val firstError = listOf(contributorsResult, commitsResult, activityResult, weeklyStatsResult)
+                .firstNotNullOfOrNull { it.exceptionOrNull() }
 
             _statsState.value = StatsUiState(
                 isLoading = false,
-                contributors = contributors.await().getOrElse { emptyList() },
-                contributorWeeklyStats = weeklyStats.await().getOrElse { emptyList() },
-                commits = commits.await().getOrElse { emptyList() },
-                commitActivity = activity.await().getOrElse { emptyList() },
+                contributors = contributorsResult.getOrElse { emptyList() },
+                contributorWeeklyStats = weeklyStatsResult.getOrElse { emptyList() },
+                commits = commitsResult.getOrElse { emptyList() },
+                commitActivity = activityResult.getOrElse { emptyList() },
                 trafficViews = trafficViewsResult.getOrNull(),
-                trafficClones = trafficClones.await().getOrNull(),
+                trafficClones = trafficClonesResult.getOrNull(),
                 trafficAccessDenied = trafficAccessDenied,
-                error = contributors.await().exceptionOrNull()?.toUserMessage("통계를 불러오지 못했습니다.")
+                error = firstError?.toUserMessage("통계를 불러오지 못했습니다.")
             )
         }
     }
@@ -314,5 +381,9 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
                 _prState.update { it.copy(prFiles = it.prFiles + (prNumber to files)) }
             }
         }
+    }
+
+    companion object {
+        private const val NO_TOKEN_MSG = "로그인이 필요합니다. 다시 로그인해 주세요."
     }
 }

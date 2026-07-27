@@ -71,7 +71,7 @@ fun DashboardScreen(
                     IconButton(onClick = onNavigateToSearch) {
                         Icon(Icons.Default.Search, contentDescription = "코드 검색")
                     }
-                    IconButton(onClick = { dashboardViewModel.loadDashboard(owner, repoName) }) {
+                    IconButton(onClick = { dashboardViewModel.loadDashboard(owner, repoName, forceRefresh = true) }) {
                         Icon(Icons.Default.Refresh, contentDescription = "새로고침")
                     }
                 }
@@ -85,13 +85,13 @@ fun DashboardScreen(
         }
 
         if (state.error != null && state.stats == null) {
-            ErrorState(state.error ?: "데이터를 불러오지 못했습니다.", { dashboardViewModel.loadDashboard(owner, repoName) }, Modifier.padding(paddingValues))
+            ErrorState(state.error ?: "데이터를 불러오지 못했습니다.", { dashboardViewModel.loadDashboard(owner, repoName, forceRefresh = true) }, Modifier.padding(paddingValues))
             return@Scaffold
         }
 
         PullToRefreshBox(
             isRefreshing = state.isLoading,
-            onRefresh = { dashboardViewModel.loadDashboard(owner, repoName) },
+            onRefresh = { dashboardViewModel.loadDashboard(owner, repoName, forceRefresh = true) },
             modifier = Modifier.padding(paddingValues)
         ) {
             LazyColumn(

@@ -57,7 +57,7 @@ fun ReleaseScreen(
                     IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, contentDescription = "뒤로") }
                 },
                 actions = {
-                    IconButton(onClick = { dashboardViewModel.loadReleases(owner, repoName) }) {
+                    IconButton(onClick = { dashboardViewModel.loadReleases(owner, repoName, forceRefresh = true) }) {
                         Icon(Icons.Default.Refresh, contentDescription = "새로고침")
                     }
                 }
@@ -68,10 +68,10 @@ fun ReleaseScreen(
         when {
             state.isLoading && state.releases.isEmpty() -> LoadingState(Modifier.padding(paddingValues))
             state.error != null && state.releases.isEmpty() ->
-                ErrorState(state.error ?: "릴리즈 목록을 불러오지 못했습니다.", { dashboardViewModel.loadReleases(owner, repoName) }, Modifier.padding(paddingValues))
+                ErrorState(state.error ?: "릴리즈 목록을 불러오지 못했습니다.", { dashboardViewModel.loadReleases(owner, repoName, forceRefresh = true) }, Modifier.padding(paddingValues))
             else -> PullToRefreshBox(
                 isRefreshing = state.isLoading,
-                onRefresh = { dashboardViewModel.loadReleases(owner, repoName) },
+                onRefresh = { dashboardViewModel.loadReleases(owner, repoName, forceRefresh = true) },
                 modifier = Modifier.padding(paddingValues)
             ) {
                 if (state.releases.isEmpty()) {

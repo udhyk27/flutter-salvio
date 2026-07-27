@@ -53,7 +53,7 @@ fun BranchScreen(
                     IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, contentDescription = "뒤로") }
                 },
                 actions = {
-                    IconButton(onClick = { dashboardViewModel.loadBranches(owner, repoName) }) {
+                    IconButton(onClick = { dashboardViewModel.loadBranches(owner, repoName, forceRefresh = true) }) {
                         Icon(Icons.Default.Refresh, contentDescription = "새로고침")
                     }
                 }
@@ -64,11 +64,11 @@ fun BranchScreen(
         when {
             state.isLoading && state.branches.isEmpty() -> LoadingState(Modifier.padding(paddingValues))
             state.error != null && state.branches.isEmpty() ->
-                ErrorState(state.error ?: "브랜치 목록을 불러오지 못했습니다.", { dashboardViewModel.loadBranches(owner, repoName) }, Modifier.padding(paddingValues))
+                ErrorState(state.error ?: "브랜치 목록을 불러오지 못했습니다.", { dashboardViewModel.loadBranches(owner, repoName, forceRefresh = true) }, Modifier.padding(paddingValues))
             else -> {
                 PullToRefreshBox(
                     isRefreshing = state.isLoading,
-                    onRefresh = { dashboardViewModel.loadBranches(owner, repoName) },
+                    onRefresh = { dashboardViewModel.loadBranches(owner, repoName, forceRefresh = true) },
                     modifier = Modifier.padding(paddingValues)
                 ) {
                     LazyColumn(

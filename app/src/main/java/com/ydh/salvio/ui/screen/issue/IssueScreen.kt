@@ -60,7 +60,7 @@ fun IssueScreen(
                     IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, contentDescription = "뒤로") }
                 },
                 actions = {
-                    IconButton(onClick = { dashboardViewModel.loadIssues(owner, repoName) }) {
+                    IconButton(onClick = { dashboardViewModel.loadIssues(owner, repoName, forceRefresh = true) }) {
                         Icon(Icons.Default.Refresh, contentDescription = "새로고침")
                     }
                 }
@@ -93,13 +93,13 @@ fun IssueScreen(
             when {
                 state.isLoading && state.openIssues.isEmpty() && state.closedIssues.isEmpty() -> LoadingState()
                 state.error != null && state.openIssues.isEmpty() && state.closedIssues.isEmpty() ->
-                    ErrorState(state.error ?: "이슈 목록을 불러오지 못했습니다.", onRetry = { dashboardViewModel.loadIssues(owner, repoName) })
+                    ErrorState(state.error ?: "이슈 목록을 불러오지 못했습니다.", onRetry = { dashboardViewModel.loadIssues(owner, repoName, forceRefresh = true) })
                 else -> {
                     val issues = if (selectedTab == 0) state.openIssues else state.closedIssues
 
                     PullToRefreshBox(
                         isRefreshing = state.isLoading,
-                        onRefresh = { dashboardViewModel.loadIssues(owner, repoName) }
+                        onRefresh = { dashboardViewModel.loadIssues(owner, repoName, forceRefresh = true) }
                     ) {
                         if (issues.isEmpty()) {
                             EmptyState(

@@ -52,7 +52,7 @@ fun StatsScreen(
                     IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, contentDescription = "뒤로") }
                 },
                 actions = {
-                    IconButton(onClick = { dashboardViewModel.loadStats(owner, repoName) }) {
+                    IconButton(onClick = { dashboardViewModel.loadStats(owner, repoName, forceRefresh = true) }) {
                         Icon(Icons.Default.Refresh, contentDescription = "새로고침")
                     }
                 }
@@ -63,11 +63,11 @@ fun StatsScreen(
         when {
             state.isLoading && state.contributors.isEmpty() -> LoadingState(Modifier.padding(paddingValues))
             state.error != null && state.contributors.isEmpty() ->
-                ErrorState(state.error ?: "통계를 불러오지 못했습니다.", { dashboardViewModel.loadStats(owner, repoName) }, Modifier.padding(paddingValues))
+                ErrorState(state.error ?: "통계를 불러오지 못했습니다.", { dashboardViewModel.loadStats(owner, repoName, forceRefresh = true) }, Modifier.padding(paddingValues))
             else -> {
                 PullToRefreshBox(
                     isRefreshing = state.isLoading,
-                    onRefresh = { dashboardViewModel.loadStats(owner, repoName) },
+                    onRefresh = { dashboardViewModel.loadStats(owner, repoName, forceRefresh = true) },
                     modifier = Modifier.padding(paddingValues)
                 ) {
                     LazyColumn(
