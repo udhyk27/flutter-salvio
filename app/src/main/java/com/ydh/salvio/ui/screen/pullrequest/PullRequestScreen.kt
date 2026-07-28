@@ -125,7 +125,7 @@ fun PullRequestScreen(
                                 contentPadding = PaddingValues(Spacing.screen),
                                 verticalArrangement = Arrangement.spacedBy(Spacing.sm)
                             ) {
-                                items(prs) { pr ->
+                                items(prs, key = { it.number }) { pr ->
                                     PullRequestCard(
                                         pr = pr,
                                         state = prState,

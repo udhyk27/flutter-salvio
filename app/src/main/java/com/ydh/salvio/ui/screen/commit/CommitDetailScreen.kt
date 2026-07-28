@@ -146,7 +146,7 @@ private fun CommitDetailContent(detail: GitHubCommitDetail, modifier: Modifier =
             )
         }
 
-        items(detail.files) { file ->
+        items(detail.files, key = { it.filename }) { file ->
             val isExpanded = expandedFiles.contains(file.filename)
             FileCard(
                 file = file,

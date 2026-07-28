@@ -81,7 +81,7 @@ fun ReleaseScreen(
                         contentPadding = PaddingValues(Spacing.screen),
                         verticalArrangement = Arrangement.spacedBy(Spacing.sm)
                     ) {
-                        items(state.releases) { release ->
+                        items(state.releases, key = { it.id }) { release ->
                             ReleaseCard(
                                 release = release,
                                 onClick = {

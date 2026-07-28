@@ -83,7 +83,7 @@ fun BranchScreen(
                                 modifier = Modifier.padding(bottom = Spacing.xs)
                             )
                         }
-                        items(state.branches) { branch ->
+                        items(state.branches, key = { it.name }) { branch ->
                             BranchCard(
                                 branch = branch,
                                 latestCommit = state.branchCommits[branch.name],

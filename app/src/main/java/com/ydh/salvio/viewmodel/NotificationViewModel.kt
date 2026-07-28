@@ -34,14 +34,15 @@ class NotificationViewModel(application: Application) : AndroidViewModel(applica
 
     fun load() {
         viewModelScope.launch {
-            _state.value = NotificationUiState(isLoading = true)
+            // 로딩 중에도 기존 목록을 유지해 새로고침 시 화면이 비지 않게 한다.
+            _state.value = _state.value.copy(isLoading = true, error = null)
             val repo = getRepo() ?: run {
-                _state.value = NotificationUiState(error = "로그인이 필요합니다. 다시 로그인해 주세요.")
+                _state.value = _state.value.copy(isLoading = false, error = "로그인이 필요합니다. 다시 로그인해 주세요.")
                 return@launch
             }
             repo.getNotifications().fold(
                 onSuccess = { _state.value = NotificationUiState(notifications = it) },
-                onFailure = { _state.value = NotificationUiState(error = it.toUserMessage("알림을 불러오지 못했습니다.")) }
+                onFailure = { _state.value = _state.value.copy(isLoading = false, error = it.toUserMessage("알림을 불러오지 못했습니다.")) }
             )
         }
     }
@@ -49,24 +50,31 @@ class NotificationViewModel(application: Application) : AndroidViewModel(applica
     fun markRead(threadId: String) {
         viewModelScope.launch {
             val repo = getRepo() ?: return@launch
-            repo.markNotificationRead(threadId).getOrNull()
-            _state.value = _state.value.copy(
-                notifications = _state.value.notifications.map {
-                    if (it.id == threadId) it.copy(unread = false) else it
-                }
-            )
+            // API 성공 시에만 UI를 읽음으로 반영 (실패 시 다음 새로고침에서 다시 나타나는 혼란 방지)
+            repo.markNotificationRead(threadId).onSuccess {
+                _state.value = _state.value.copy(
+                    notifications = _state.value.notifications.map {
+                        if (it.id == threadId) it.copy(unread = false) else it
+                    }
+                )
+            }
         }
     }
 
     fun markAllRead() {
         viewModelScope.launch {
             val repo = getRepo() ?: return@launch
+            val succeeded = mutableSetOf<String>()
             _state.value.notifications.filter { it.unread }.forEach { n ->
-                repo.markNotificationRead(n.id)
+                repo.markNotificationRead(n.id).onSuccess { succeeded.add(n.id) }
             }
-            _state.value = _state.value.copy(
-                notifications = _state.value.notifications.map { it.copy(unread = false) }
-            )
+            if (succeeded.isNotEmpty()) {
+                _state.value = _state.value.copy(
+                    notifications = _state.value.notifications.map {
+                        if (it.id in succeeded) it.copy(unread = false) else it
+                    }
+                )
+            }
         }
     }
 }

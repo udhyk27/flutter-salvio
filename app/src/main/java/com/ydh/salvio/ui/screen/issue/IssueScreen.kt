@@ -111,7 +111,7 @@ fun IssueScreen(
                                 contentPadding = PaddingValues(Spacing.screen),
                                 verticalArrangement = Arrangement.spacedBy(Spacing.sm)
                             ) {
-                                items(issues) { issue ->
+                                items(issues, key = { it.number }) { issue ->
                                     IssueCard(
                                         issue = issue,
                                         onClick = {

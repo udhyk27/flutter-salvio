@@ -8,6 +8,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -87,19 +88,25 @@ fun NotificationScreen(
         containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->
         when {
-            state.isLoading -> LoadingState(Modifier.padding(paddingValues))
-            state.error != null -> ErrorState(state.error!!, { notificationViewModel.load() }, Modifier.padding(paddingValues))
+            state.isLoading && state.notifications.isEmpty() -> LoadingState(Modifier.padding(paddingValues))
+            state.error != null && state.notifications.isEmpty() ->
+                ErrorState(state.error!!, { notificationViewModel.load() }, Modifier.padding(paddingValues))
             state.notifications.isEmpty() -> EmptyState("읽지 않은 알림이 없습니다.", Icons.Default.NotificationsNone, Modifier.padding(paddingValues))
-            else -> LazyColumn(
-                modifier = Modifier.padding(paddingValues),
-                contentPadding = PaddingValues(Spacing.screen),
-                verticalArrangement = Arrangement.spacedBy(Spacing.sm)
+            else -> PullToRefreshBox(
+                isRefreshing = state.isLoading,
+                onRefresh = { notificationViewModel.load() },
+                modifier = Modifier.padding(paddingValues)
             ) {
-                items(state.notifications) { notification ->
-                    NotificationCard(
-                        notification = notification,
-                        onMarkRead = { notificationViewModel.markRead(notification.id) }
-                    )
+                LazyColumn(
+                    contentPadding = PaddingValues(Spacing.screen),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.sm)
+                ) {
+                    items(state.notifications, key = { it.id }) { notification ->
+                        NotificationCard(
+                            notification = notification,
+                            onMarkRead = { notificationViewModel.markRead(notification.id) }
+                        )
+                    }
                 }
             }
         }

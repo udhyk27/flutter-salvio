@@ -164,7 +164,7 @@ fun SearchScreen(
                                 contentPadding = PaddingValues(horizontal = Spacing.screen, vertical = Spacing.sm),
                                 verticalArrangement = Arrangement.spacedBy(Spacing.sm)
                             ) {
-                                items(results.items) { item ->
+                                items(results.items, key = { it.htmlUrl }) { item ->
                                     SearchResultCard(item = item)
                                 }
                             }
