@@ -31,6 +31,12 @@ fun relativeTime(dateStr: String): String {
     }
 }
 
+/** 주어진 일수보다 오래된 시각인지 여부. 파싱 실패 시 false. */
+fun isOlderThanDays(dateStr: String, days: Long): Boolean {
+    val instant = dateStr.toInstantOrNull() ?: return false
+    return ChronoUnit.DAYS.between(instant, Instant.now()) > days
+}
+
 /** 오늘/어제/N일 전/N주 전/N개월 전. (일 단위 경과 표시용) */
 fun relativeDays(dateStr: String): String {
     val instant = dateStr.toInstantOrNull() ?: return dateStr.take(10)

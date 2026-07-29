@@ -26,9 +26,9 @@ import com.ydh.salvio.ui.component.SalvioCard
 import com.ydh.salvio.ui.component.SalvioTopBar
 import com.ydh.salvio.ui.component.StatusBadge
 import com.ydh.salvio.ui.theme.*
+import com.ydh.salvio.util.isOlderThanDays
+import com.ydh.salvio.util.relativeDays
 import com.ydh.salvio.viewmodel.DashboardViewModel
-import java.time.Instant
-import java.time.temporal.ChronoUnit
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -105,12 +105,7 @@ fun BranchScreen(
 @Composable
 private fun BranchCard(branch: GitHubBranch, latestCommit: GitHubCommit?, onClick: () -> Unit) {
     val commitDate = latestCommit?.commit?.author?.date
-    val isStale = commitDate?.let {
-        try {
-            val days = ChronoUnit.DAYS.between(Instant.parse(it), Instant.now())
-            days > 30
-        } catch (e: Exception) { false }
-    } ?: false
+    val isStale = commitDate?.let { isOlderThanDays(it, 30) } ?: false
 
     SalvioCard(modifier = Modifier.fillMaxWidth(), onClick = onClick) {
         Row(
@@ -174,15 +169,4 @@ private fun BranchCard(branch: GitHubBranch, latestCommit: GitHubCommit?, onClic
     }
 }
 
-private fun formatDate(dateStr: String): String {
-    return try {
-        val days = ChronoUnit.DAYS.between(Instant.parse(dateStr), Instant.now())
-        when {
-            days == 0L -> "오늘"
-            days == 1L -> "어제"
-            days < 7L -> "${days}일 전"
-            days < 30L -> "${days / 7}주 전"
-            else -> "${days / 30}개월 전"
-        }
-    } catch (e: Exception) { dateStr.take(10) }
-}
+private fun formatDate(dateStr: String): String = relativeDays(dateStr)

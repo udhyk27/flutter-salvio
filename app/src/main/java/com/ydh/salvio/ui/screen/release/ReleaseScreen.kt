@@ -30,9 +30,7 @@ import com.ydh.salvio.ui.component.SalvioTopBar
 import com.ydh.salvio.ui.component.StatusBadge
 import com.ydh.salvio.ui.theme.*
 import com.ydh.salvio.viewmodel.DashboardViewModel
-import java.time.Instant
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
+import com.ydh.salvio.util.formatAbsolute
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -199,15 +197,8 @@ private fun ReleaseCard(release: GitHubRelease, onClick: () -> Unit) {
     }
 }
 
-private fun formatReleaseDate(dateStr: String): String {
-    return try {
-        val instant = Instant.parse(dateStr)
-        val formatter = DateTimeFormatter.ofPattern("yyyy. MM. dd").withZone(ZoneId.systemDefault())
-        formatter.format(instant)
-    } catch (e: Exception) {
-        dateStr.take(10)
-    }
-}
+private fun formatReleaseDate(dateStr: String): String =
+    formatAbsolute(dateStr, "yyyy. MM. dd")
 
 private fun formatCount(count: Int): String =
     if (count >= 1000) "${count / 1000}k" else count.toString()

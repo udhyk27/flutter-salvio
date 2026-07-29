@@ -27,10 +27,7 @@ import com.ydh.salvio.ui.component.SectionHeader
 import com.ydh.salvio.ui.theme.*
 import com.ydh.salvio.viewmodel.DashboardUiState
 import com.ydh.salvio.viewmodel.DashboardViewModel
-import java.time.Instant
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
-import java.time.temporal.ChronoUnit
+import com.ydh.salvio.util.relativeDays
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -331,22 +328,4 @@ private fun ContributorsSection(state: DashboardUiState) {
     }
 }
 
-private fun formatDate(dateStr: String): String {
-    return try {
-        val instant = Instant.parse(dateStr)
-        val now = Instant.now()
-        val days = ChronoUnit.DAYS.between(instant, now)
-        when {
-            days == 0L -> "오늘"
-            days == 1L -> "어제"
-            days < 7L -> "${days}일 전"
-            days < 30L -> "${days / 7}주 전"
-            else -> {
-                val formatter = DateTimeFormatter.ofPattern("MM/dd").withZone(ZoneId.systemDefault())
-                formatter.format(instant)
-            }
-        }
-    } catch (e: Exception) {
-        dateStr.take(10)
-    }
-}
+private fun formatDate(dateStr: String): String = relativeDays(dateStr)

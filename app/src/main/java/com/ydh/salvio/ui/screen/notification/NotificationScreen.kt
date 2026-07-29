@@ -24,11 +24,8 @@ import com.ydh.salvio.ui.component.LoadingState
 import com.ydh.salvio.ui.component.SalvioCard
 import com.ydh.salvio.ui.component.SalvioTopBar
 import com.ydh.salvio.ui.theme.*
+import com.ydh.salvio.util.relativeTime
 import com.ydh.salvio.viewmodel.NotificationViewModel
-import java.time.Instant
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
-import java.time.temporal.ChronoUnit
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -174,7 +171,7 @@ private fun NotificationCard(notification: GitHubNotification, onMarkRead: () ->
                 Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm), verticalAlignment = Alignment.CenterVertically) {
                     ReasonBadge(label = reasonLabel)
                     Text(
-                        text = formatNotifDate(notification.updatedAt),
+                        text = relativeTime(notification.updatedAt),
                         fontSize = 11.sp,
                         color = SalvioTheme.colors.textSecondary
                     )
@@ -205,20 +202,3 @@ private fun ReasonBadge(label: String) {
     }
 }
 
-private fun formatNotifDate(dateStr: String): String {
-    return try {
-        val instant = Instant.parse(dateStr)
-        val now = Instant.now()
-        val hours = ChronoUnit.HOURS.between(instant, now)
-        when {
-            hours < 1 -> "${ChronoUnit.MINUTES.between(instant, now)}분 전"
-            hours < 24 -> "${hours}시간 전"
-            else -> {
-                val formatter = DateTimeFormatter.ofPattern("MM/dd").withZone(ZoneId.systemDefault())
-                formatter.format(instant)
-            }
-        }
-    } catch (e: Exception) {
-        dateStr.take(10)
-    }
-}

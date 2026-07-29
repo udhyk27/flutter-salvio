@@ -32,9 +32,7 @@ import com.ydh.salvio.ui.component.SalvioCard
 import com.ydh.salvio.ui.component.SalvioTopBar
 import com.ydh.salvio.ui.theme.*
 import com.ydh.salvio.viewmodel.DashboardViewModel
-import java.time.Instant
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
+import com.ydh.salvio.util.formatAbsolute
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -239,12 +237,6 @@ private fun LabelChip(label: GitHubLabel) {
 
 private fun formatIssueDate(issue: GitHubIssue): String {
     val dateStr = issue.closedAt ?: issue.createdAt
-    return try {
-        val instant = Instant.parse(dateStr)
-        val formatter = DateTimeFormatter.ofPattern("MM월 dd일").withZone(ZoneId.systemDefault())
-        val prefix = if (issue.state == "closed") "closed " else "opened "
-        prefix + formatter.format(instant)
-    } catch (e: Exception) {
-        dateStr.take(10)
-    }
+    val prefix = if (issue.state == "closed") "closed " else "opened "
+    return prefix + formatAbsolute(dateStr, "MM월 dd일")
 }

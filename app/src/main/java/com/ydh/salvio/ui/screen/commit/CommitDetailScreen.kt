@@ -28,9 +28,7 @@ import com.ydh.salvio.ui.component.LoadingState
 import com.ydh.salvio.ui.component.SalvioCard
 import com.ydh.salvio.ui.component.SalvioTopBar
 import com.ydh.salvio.ui.theme.*
-import java.time.Instant
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
+import com.ydh.salvio.util.formatAbsolute
 import com.ydh.salvio.viewmodel.DashboardViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -279,7 +277,5 @@ private fun StatChip(label: String, color: Color) {
     }
 }
 
-private fun formatDate(dateStr: String): String = try {
-    val formatter = DateTimeFormatter.ofPattern("yyyy년 MM월 dd일 HH:mm").withZone(ZoneId.systemDefault())
-    formatter.format(Instant.parse(dateStr))
-} catch (e: Exception) { dateStr }
+private fun formatDate(dateStr: String): String =
+    formatAbsolute(dateStr, "yyyy년 MM월 dd일 HH:mm")
