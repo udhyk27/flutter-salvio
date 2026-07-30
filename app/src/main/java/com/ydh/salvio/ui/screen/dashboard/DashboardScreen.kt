@@ -99,7 +99,7 @@ fun DashboardScreen(
                 if (bannerError != null && state.stats != null) {
                     item { RefreshErrorBanner(bannerError) }
                 }
-                item { StatsRow(state, onNavigateToPRs, onNavigateToBranches) }
+                item { StatsRow(state, onNavigateToPRs, onNavigateToBranches, onNavigateToStats) }
                 item { QuickActionsRow(onNavigateToPRs, onNavigateToBranches, onNavigateToStats, onNavigateToIssues, onNavigateToReleases) }
                 item { RecentCommitsSection(state.recentCommits, onNavigateToCommit) }
                 item { OpenPRsSection(state, onNavigateToPRs) }
@@ -130,7 +130,8 @@ private fun RefreshErrorBanner(message: String) {
 private fun StatsRow(
     state: DashboardUiState,
     onNavigateToPRs: () -> Unit,
-    onNavigateToBranches: () -> Unit
+    onNavigateToBranches: () -> Unit,
+    onNavigateToStats: () -> Unit
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -139,7 +140,7 @@ private fun StatsRow(
         StatCard(Modifier.weight(1f), "Open PR", state.stats?.openPrCount?.toString() ?: "-", onNavigateToPRs)
         StatCard(Modifier.weight(1f), "Merged", state.stats?.mergedPrCount?.toString() ?: "-", onNavigateToPRs)
         StatCard(Modifier.weight(1f), "브랜치", state.stats?.branchCount?.toString() ?: "-", onNavigateToBranches)
-        StatCard(Modifier.weight(1f), "기여자", state.stats?.contributorCount?.toString() ?: "-", {})
+        StatCard(Modifier.weight(1f), "기여자", state.stats?.contributorCount?.toString() ?: "-", onNavigateToStats)
     }
 }
 
@@ -148,7 +149,7 @@ private fun StatCard(
     modifier: Modifier = Modifier,
     label: String,
     value: String,
-    onClick: () -> Unit
+    onClick: (() -> Unit)? = null
 ) {
     SalvioCard(modifier = modifier, onClick = onClick) {
         Column(

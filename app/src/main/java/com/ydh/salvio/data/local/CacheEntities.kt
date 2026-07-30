@@ -106,3 +106,10 @@ data class CachedContributorStats(
     val json: String,
     val cachedAt: Long = System.currentTimeMillis()
 )
+
+@Entity(tableName = "cached_contributors")
+data class CachedContributors(
+    @PrimaryKey val repoFullName: String,
+    val json: String,
+    val cachedAt: Long = System.currentTimeMillis()
+)

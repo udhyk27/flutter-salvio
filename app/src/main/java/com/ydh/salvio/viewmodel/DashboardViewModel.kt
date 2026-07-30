@@ -132,7 +132,7 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
             val commits = async { repo.getCommits(owner, repoName, forceRefresh = forceRefresh) }
             val openPrs = async { repo.getPullRequests(owner, repoName, "open", forceRefresh) }
             val branches = async { repo.getBranches(owner, repoName, forceRefresh) }
-            val contributors = async { repo.getContributors(owner, repoName) }
+            val contributors = async { repo.getContributors(owner, repoName, forceRefresh) }
             val closedPrs = async { repo.getPullRequests(owner, repoName, "closed", forceRefresh) }
 
             val repoInfoResult = repoInfo.await()
@@ -314,7 +314,7 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
                 return@launch
             }
 
-            val contributors = async { repo.getContributors(owner, repoName) }
+            val contributors = async { repo.getContributors(owner, repoName, forceRefresh) }
             val commits = async { repo.getCommits(owner, repoName, 1, forceRefresh) }
             val activity = async { repo.getCommitActivity(owner, repoName, forceRefresh) }
             val weeklyStats = async { repo.getContributorStats(owner, repoName, forceRefresh) }

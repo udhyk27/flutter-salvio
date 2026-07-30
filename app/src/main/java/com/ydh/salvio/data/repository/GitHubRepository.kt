@@ -71,8 +71,17 @@ class GitHubRepository(
         branches
     }
 
-    suspend fun getContributors(owner: String, repo: String): Result<List<GitHubContributor>> =
-        runCatching { api.getContributors(owner, repo) }
+    suspend fun getContributors(owner: String, repo: String, forceRefresh: Boolean = false): Result<List<GitHubContributor>> = runCatching {
+        val repoFullName = "$owner/$repo"
+        val cached = dao?.getContributors(repoFullName)
+        if (!forceRefresh && cached != null && !isExpired(cached.cachedAt)) {
+            val type = object : TypeToken<List<GitHubContributor>>() {}.type
+            return@runCatching gson.fromJson(cached.json, type)
+        }
+        val contributors = api.getContributors(owner, repo)
+        dao?.insertContributors(CachedContributors(repoFullName, gson.toJson(contributors)))
+        contributors
+    }
 
     suspend fun getRepo(owner: String, repo: String, forceRefresh: Boolean = false): Result<GitHubRepo> = runCatching {
         val repoFullName = "$owner/$repo"

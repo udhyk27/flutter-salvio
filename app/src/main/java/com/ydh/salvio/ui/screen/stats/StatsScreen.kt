@@ -112,14 +112,23 @@ private fun CommitActivityCard(activity: List<CommitWeekActivity>) {
         Column(modifier = Modifier.padding(Spacing.card)) {
             SectionHeader(title = "커밋 활동 (최근 26주)", icon = Icons.Default.ShowChart)
             Spacer(modifier = Modifier.height(Spacing.md))
-            val totalRecent = activity.takeLast(4).sumOf { it.total }
-            CommitActivityChart(activity = activity)
-            Spacer(modifier = Modifier.height(Spacing.sm))
-            Text(
-                text = "최근 4주 총 $totalRecent commits",
-                fontSize = 12.sp,
-                color = SalvioTheme.colors.textSecondary
-            )
+            if (activity.isEmpty()) {
+                // GitHub 통계 엔드포인트는 집계 중이면 빈 결과(202)를 반환한다.
+                Text(
+                    text = "커밋 활동 데이터를 집계 중이거나 표시할 내역이 없습니다.",
+                    fontSize = 12.sp,
+                    color = SalvioTheme.colors.textSecondary
+                )
+            } else {
+                val totalRecent = activity.takeLast(4).sumOf { it.total }
+                CommitActivityChart(activity = activity)
+                Spacer(modifier = Modifier.height(Spacing.sm))
+                Text(
+                    text = "최근 4주 총 $totalRecent commits",
+                    fontSize = 12.sp,
+                    color = SalvioTheme.colors.textSecondary
+                )
+            }
         }
     }
 }

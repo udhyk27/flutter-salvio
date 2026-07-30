@@ -119,4 +119,11 @@ interface CacheDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertContributorStats(stats: CachedContributorStats)
+
+    // Contributors
+    @Query("SELECT * FROM cached_contributors WHERE repoFullName = :repoFullName")
+    suspend fun getContributors(repoFullName: String): CachedContributors?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertContributors(contributors: CachedContributors)
 }

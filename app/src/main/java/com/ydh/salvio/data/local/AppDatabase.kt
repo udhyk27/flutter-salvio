@@ -19,9 +19,10 @@ import androidx.room.RoomDatabase
         CachedPrFiles::class,
         CachedTrafficViews::class,
         CachedTrafficClones::class,
-        CachedContributorStats::class
+        CachedContributorStats::class,
+        CachedContributors::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
