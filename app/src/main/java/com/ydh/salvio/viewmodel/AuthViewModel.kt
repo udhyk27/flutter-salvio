@@ -7,10 +7,13 @@ import com.ydh.salvio.BuildConfig
 import com.ydh.salvio.SalvioApplication
 import com.ydh.salvio.data.api.RetrofitClient
 import com.ydh.salvio.data.model.GitHubUser
+import com.ydh.salvio.data.worker.PrCheckWorker
 import com.ydh.salvio.util.httpCode
 import com.ydh.salvio.util.toUserMessage
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -81,6 +84,7 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
                     } else {
                         e.toUserMessage("인증에 실패했습니다.")
                     }
+                    _currentUser.value = null
                     _authState.value = AuthState.Error(msg)
                 }
             )
@@ -162,6 +166,10 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
             deviceFlowJob?.cancel()
             _deviceFlow.value = DeviceFlowState.Idle
             dataStore.clearToken()
+            // 백그라운드 PR 감시 중단 + 이전 사용자 데이터(메모리/Room 캐시) 제거
+            PrCheckWorker.cancel(app)
+            app.clearSession()
+            withContext(Dispatchers.IO) { app.database.clearAllTables() }
             _currentUser.value = null
             _authState.value = AuthState.Idle
         }

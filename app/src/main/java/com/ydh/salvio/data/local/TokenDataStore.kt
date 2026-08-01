@@ -72,24 +72,27 @@ class TokenDataStore(private val context: Context) {
         context.dataStore.edit { it[WATCHED_REPOS_KEY] = repos.joinToString(",") }
     }
 
-    // PR 알림: repoFullName -> 마지막으로 알림 보낸 open PR 수 (JSON 형태로 저장)
-    suspend fun getLastPrCount(repoFullName: String): Int {
-        val raw = context.dataStore.data.first()[LAST_PR_IDS_KEY] ?: return 0
+    // PR 알림: repoFullName -> 마지막으로 확인한 open PR 번호 집합.
+    // 저장 형식: "owner/repo=1,2,3;other/repo=4,5" (repo는 ';', 번호는 ',' 구분)
+    // 카운트가 아닌 번호 집합을 저장해, PR 하나가 열리고 하나가 닫혀 총 개수가
+    // 같아도 새 PR을 정확히 감지한다.
+    suspend fun getLastPrNumbers(repoFullName: String): Set<Int> {
+        val raw = context.dataStore.data.first()[LAST_PR_IDS_KEY] ?: return emptySet()
         return raw.split(";")
-            .mapNotNull { entry ->
-                val parts = entry.split("=")
-                if (parts.size == 2 && parts[0] == repoFullName) parts[1].toIntOrNull() else null
-            }
-            .firstOrNull() ?: 0
+            .firstOrNull { it.substringBefore("=") == repoFullName }
+            ?.substringAfter("=", "")
+            ?.split(",")
+            ?.mapNotNull { it.toIntOrNull() }
+            ?.toSet()
+            ?: emptySet()
     }
 
-    suspend fun saveLastPrCount(repoFullName: String, count: Int) {
+    suspend fun saveLastPrNumbers(repoFullName: String, numbers: Set<Int>) {
         context.dataStore.edit { prefs ->
-            val raw = prefs[LAST_PR_IDS_KEY] ?: ""
-            val entries = raw.split(";").filter { it.isNotBlank() }
-                .filter { !it.startsWith("$repoFullName=") }
+            val entries = (prefs[LAST_PR_IDS_KEY] ?: "").split(";")
+                .filter { it.isNotBlank() && it.substringBefore("=") != repoFullName }
                 .toMutableList()
-            entries.add("$repoFullName=$count")
+            entries.add("$repoFullName=${numbers.sorted().joinToString(",")}")
             prefs[LAST_PR_IDS_KEY] = entries.joinToString(";")
         }
     }

@@ -23,38 +23,39 @@ class PrCheckWorker(
 
         val repo = (context.applicationContext as SalvioApplication).githubRepository(token)
 
+        var anyFailed = false
         watchedRepos.forEach { fullName ->
             val parts = fullName.split("/")
             if (parts.size != 2) return@forEach
             val (owner, repoName) = parts
 
-            val prs = repo.getPullRequests(owner, repoName, "open").getOrElse { return@forEach }
-            val currentCount = prs.size
-            val lastCount = dataStore.getLastPrCount(fullName)
+            // 백그라운드 감시는 항상 최신 데이터를 가져와야 한다 (캐시 사용 시 새 PR 누락).
+            val prs = repo.getPullRequests(owner, repoName, "open", forceRefresh = true)
+                .getOrElse { anyFailed = true; return@forEach }
 
-            if (currentCount > lastCount) {
-                val newCount = currentCount - lastCount
+            val currentNumbers = prs.map { it.number }.toSet()
+            val lastNumbers = dataStore.getLastPrNumbers(fullName)
+            // 총 개수가 같아도(열림 1 + 닫힘 1) 집합 차이로 새 PR을 감지한다.
+            val newNumbers = currentNumbers - lastNumbers
+
+            if (newNumbers.isNotEmpty()) {
                 sendNotification(
+                    id = fullName.hashCode(),
                     title = "새 PR - $repoName",
-                    body = "${newCount}개의 새 Pull Request가 열렸습니다."
+                    body = "${newNumbers.size}개의 새 Pull Request가 열렸습니다."
                 )
             }
-            dataStore.saveLastPrCount(fullName, currentCount)
+            dataStore.saveLastPrNumbers(fullName, currentNumbers)
         }
 
-        return Result.success()
+        // 일시적 네트워크 오류로 일부 조회에 실패했으면 재시도를 요청한다.
+        return if (anyFailed) Result.retry() else Result.success()
     }
 
-    private fun sendNotification(title: String, body: String) {
+    private fun sendNotification(id: Int, title: String, body: String) {
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        val channelId = "salvio_pr_channel"
 
-        val channel = NotificationChannel(channelId, "PR 알림", NotificationManager.IMPORTANCE_DEFAULT).apply {
-            description = "새로운 Pull Request 알림"
-        }
-        manager.createNotificationChannel(channel)
-
-        val notification = NotificationCompat.Builder(context, channelId)
+        val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_dialog_info)
             .setContentTitle(title)
             .setContentText(body)
@@ -62,11 +63,22 @@ class PrCheckWorker(
             .setAutoCancel(true)
             .build()
 
-        manager.notify(System.currentTimeMillis().toInt(), notification)
+        // repo 별 안정적 ID → 같은 저장소 알림은 쌓이지 않고 갱신된다.
+        manager.notify(id, notification)
     }
 
     companion object {
         const val WORK_NAME = "pr_check_work"
+        const val CHANNEL_ID = "salvio_pr_channel"
+
+        /** PR 알림 채널 생성 (앱 시작 시 한 번 호출). */
+        fun ensureChannel(context: Context) {
+            val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            val channel = NotificationChannel(CHANNEL_ID, "PR 알림", NotificationManager.IMPORTANCE_DEFAULT).apply {
+                description = "새로운 Pull Request 알림"
+            }
+            manager.createNotificationChannel(channel)
+        }
 
         fun schedule(context: Context) {
             val request = PeriodicWorkRequestBuilder<PrCheckWorker>(15, TimeUnit.MINUTES)

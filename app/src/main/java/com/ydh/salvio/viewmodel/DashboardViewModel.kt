@@ -114,6 +114,7 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
     val releaseState: StateFlow<ReleaseUiState> = _releaseState.asStateFlow()
 
     private var prDetailsJob: Job? = null
+    private var searchJob: Job? = null
 
     private suspend fun getRepo(): GitHubRepository? {
         val token = dataStore.token.first() ?: return null
@@ -353,7 +354,9 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
 
     fun searchCode(owner: String, repoName: String, query: String) {
         if (query.isBlank()) return
-        viewModelScope.launch {
+        // 이전 검색을 취소해 느린 응답이 최신 결과를 덮어쓰지 않게 한다.
+        searchJob?.cancel()
+        searchJob = viewModelScope.launch {
             _searchState.value = SearchUiState(isLoading = true, query = query)
             val repo = getRepo() ?: return@launch
             repo.searchCode(owner, repoName, query).fold(

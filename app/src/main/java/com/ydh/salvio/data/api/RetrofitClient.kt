@@ -33,6 +33,9 @@ object RetrofitClient {
     /** 토큰별 GitHubApi 캐시 — 동일 토큰이면 Retrofit/Api 인스턴스를 재사용한다. */
     private val apiCache = HashMap<String, GitHubApi>()
 
+    /** 로그아웃 시 토큰별 API 캐시를 비운다 (이전 사용자 클라이언트 잔존 방지). */
+    fun clearCache() = synchronized(apiCache) { apiCache.clear() }
+
     fun create(token: String): GitHubApi = synchronized(apiCache) {
         apiCache.getOrPut(token) {
             val authInterceptor = Interceptor { chain ->
