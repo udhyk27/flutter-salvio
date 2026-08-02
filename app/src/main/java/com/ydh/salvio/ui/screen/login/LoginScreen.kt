@@ -4,12 +4,16 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -21,6 +25,7 @@ import com.ydh.salvio.ui.component.SalvioCard
 import com.ydh.salvio.ui.theme.*
 import com.ydh.salvio.viewmodel.AuthState
 import com.ydh.salvio.viewmodel.AuthViewModel
+import com.ydh.salvio.viewmodel.DeviceFlowState
 
 @Composable
 fun LoginScreen(
@@ -28,6 +33,9 @@ fun LoginScreen(
     onLoginSuccess: () -> Unit
 ) {
     val authState by authViewModel.authState.collectAsState()
+    val deviceFlow by authViewModel.deviceFlow.collectAsState()
+    val uriHandler = LocalUriHandler.current
+    val clipboard = LocalClipboardManager.current
     var token by remember { mutableStateOf("") }
     var showToken by remember { mutableStateOf(false) }
 
@@ -129,6 +137,55 @@ fun LoginScreen(
                 }
             }
 
+            Spacer(modifier = Modifier.height(Spacing.lg))
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                HorizontalDivider(modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.outlineVariant)
+                Text(
+                    "  또는  ",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = SalvioTheme.colors.textSecondary
+                )
+                HorizontalDivider(modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.outlineVariant)
+            }
+
+            Spacer(modifier = Modifier.height(Spacing.lg))
+
+            when (val df = deviceFlow) {
+                is DeviceFlowState.AwaitingAuthorization -> DeviceAuthCard(
+                    userCode = df.userCode,
+                    verificationUri = df.verificationUri,
+                    onOpen = { uriHandler.openUri(df.verificationUri) },
+                    onCopy = { clipboard.setText(AnnotatedString(df.userCode)) },
+                    onCancel = { authViewModel.cancelDeviceLogin() }
+                )
+                else -> {
+                    OutlinedButton(
+                        onClick = { authViewModel.startDeviceLogin() },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp),
+                        enabled = df !is DeviceFlowState.Starting,
+                        shape = Radius.button
+                    ) {
+                        if (df is DeviceFlowState.Starting) {
+                            CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                        } else {
+                            Text("GitHub 계정으로 로그인", fontWeight = FontWeight.Medium)
+                        }
+                    }
+                    if (df is DeviceFlowState.Error) {
+                        Spacer(modifier = Modifier.height(Spacing.sm))
+                        Text(
+                            text = df.message,
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall,
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                }
+            }
+
             Spacer(modifier = Modifier.height(Spacing.xl))
 
             Text(
@@ -138,6 +195,67 @@ fun LoginScreen(
                 textAlign = TextAlign.Center,
                 lineHeight = 18.sp
             )
+        }
+    }
+}
+
+@Composable
+private fun DeviceAuthCard(
+    userCode: String,
+    verificationUri: String,
+    onOpen: () -> Unit,
+    onCopy: () -> Unit,
+    onCancel: () -> Unit
+) {
+    SalvioCard(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.padding(Spacing.xl),
+            verticalArrangement = Arrangement.spacedBy(Spacing.md),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = "아래 코드를 GitHub 인증 페이지에 입력하세요",
+                style = MaterialTheme.typography.bodyMedium,
+                color = SalvioTheme.colors.textSecondary,
+                textAlign = TextAlign.Center
+            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
+            ) {
+                Text(
+                    text = userCode,
+                    fontSize = 28.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 4.sp,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                IconButton(onClick = onCopy) {
+                    Icon(Icons.Default.ContentCopy, contentDescription = "코드 복사", tint = SalvioTheme.colors.textSecondary)
+                }
+            }
+            Button(
+                onClick = onOpen,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp),
+                shape = Radius.button
+            ) {
+                Text("인증 페이지 열기", fontWeight = FontWeight.SemiBold)
+            }
+            Text(
+                text = verificationUri,
+                style = MaterialTheme.typography.labelMedium,
+                color = SalvioTheme.colors.textSecondary
+            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
+            ) {
+                CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                Text("인증 대기 중…", style = MaterialTheme.typography.labelMedium, color = SalvioTheme.colors.textSecondary)
+            }
+            TextButton(onClick = onCancel) { Text("취소") }
         }
     }
 }
