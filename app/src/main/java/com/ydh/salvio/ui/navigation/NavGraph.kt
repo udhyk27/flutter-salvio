@@ -1,5 +1,6 @@
 package com.ydh.salvio.ui.navigation
 
+import android.net.Uri
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -40,15 +41,19 @@ object Routes {
     const val NOTIFICATIONS = "notifications"
     const val SEARCH = "search/{owner}/{repo}"
 
-    fun search(owner: String, repo: String) = "search/$owner/$repo"
+    // 경로 세그먼트는 인코딩해 특수문자(예: '/', '.')로 인한 라우트 매칭 깨짐을 방지.
+    // NavType.StringType 이 읽을 때 자동 디코딩하므로 왕복이 일치한다.
+    private fun seg(value: String) = Uri.encode(value)
 
-    fun dashboard(owner: String, repo: String) = "dashboard/$owner/$repo"
-    fun pullRequests(owner: String, repo: String) = "pullrequests/$owner/$repo"
-    fun branches(owner: String, repo: String) = "branches/$owner/$repo"
-    fun stats(owner: String, repo: String) = "stats/$owner/$repo"
-    fun commitDetail(owner: String, repo: String, sha: String) = "commit/$owner/$repo/$sha"
-    fun issues(owner: String, repo: String) = "issues/$owner/$repo"
-    fun releases(owner: String, repo: String) = "releases/$owner/$repo"
+    fun search(owner: String, repo: String) = "search/${seg(owner)}/${seg(repo)}"
+
+    fun dashboard(owner: String, repo: String) = "dashboard/${seg(owner)}/${seg(repo)}"
+    fun pullRequests(owner: String, repo: String) = "pullrequests/${seg(owner)}/${seg(repo)}"
+    fun branches(owner: String, repo: String) = "branches/${seg(owner)}/${seg(repo)}"
+    fun stats(owner: String, repo: String) = "stats/${seg(owner)}/${seg(repo)}"
+    fun commitDetail(owner: String, repo: String, sha: String) = "commit/${seg(owner)}/${seg(repo)}/${seg(sha)}"
+    fun issues(owner: String, repo: String) = "issues/${seg(owner)}/${seg(repo)}"
+    fun releases(owner: String, repo: String) = "releases/${seg(owner)}/${seg(repo)}"
 }
 
 @Composable
