@@ -25,6 +25,10 @@ class RepoViewModel(application: Application) : AndroidViewModel(application) {
     private val _repoListState = MutableStateFlow<RepoListState>(RepoListState.Idle)
     val repoListState: StateFlow<RepoListState> = _repoListState.asStateFlow()
 
+    // 당겨서 새로고침 인디케이터용. 목록을 유지한 채 갱신 중임을 표시한다.
+    private val _isRefreshing = MutableStateFlow(false)
+    val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
+
     private val _selectedRepo = MutableStateFlow<GitHubRepo?>(null)
     val selectedRepo: StateFlow<GitHubRepo?> = _selectedRepo.asStateFlow()
 
@@ -36,16 +40,24 @@ class RepoViewModel(application: Application) : AndroidViewModel(application) {
 
     fun loadRepos(forceRefresh: Boolean = false) {
         viewModelScope.launch {
-            _repoListState.value = RepoListState.Loading
+            // 이미 목록이 있으면 전체 로딩 화면 대신 새로고침 인디케이터만 띄운다.
+            val hasData = _repoListState.value is RepoListState.Success
+            if (hasData) _isRefreshing.value = true else _repoListState.value = RepoListState.Loading
+
             val token = dataStore.token.first() ?: run {
                 _repoListState.value = RepoListState.Error("로그인이 필요합니다. 다시 로그인해 주세요.")
+                _isRefreshing.value = false
                 return@launch
             }
             val repo = app.githubRepository(token)
             repo.getUserRepos(forceRefresh).fold(
                 onSuccess = { repos -> _repoListState.value = RepoListState.Success(repos) },
-                onFailure = { e -> _repoListState.value = RepoListState.Error(e.toUserMessage("조회에 실패했습니다.")) }
+                onFailure = { e ->
+                    // 새로고침 중 실패면 기존 목록을 유지하고, 초기 로드 실패만 에러 화면으로 전환한다.
+                    if (!hasData) _repoListState.value = RepoListState.Error(e.toUserMessage("조회에 실패했습니다."))
+                }
             )
+            _isRefreshing.value = false
         }
     }
 

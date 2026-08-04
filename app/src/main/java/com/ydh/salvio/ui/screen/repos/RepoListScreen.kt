@@ -16,6 +16,7 @@ import androidx.compose.material.icons.outlined.AccountCircle
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -53,6 +54,7 @@ fun RepoListScreen(
     val repoState by repoViewModel.repoListState.collectAsState()
     val favorites by repoViewModel.favoriteRepos.collectAsState()
     val watchedRepos by repoViewModel.watchedRepos.collectAsState()
+    val isRefreshing by repoViewModel.isRefreshing.collectAsState()
     val themeMode by themeViewModel.themeMode.collectAsState()
     val user = (authState as? AuthState.Success)?.user
 
@@ -163,6 +165,10 @@ fun RepoListScreen(
                     val (favRepos, otherRepos) = filtered.partition { favorites.contains(it.fullName) }
                     val sorted = favRepos + otherRepos
 
+                    PullToRefreshBox(
+                        isRefreshing = isRefreshing,
+                        onRefresh = { repoViewModel.loadRepos(forceRefresh = true) }
+                    ) {
                     LazyColumn(
                         contentPadding = PaddingValues(horizontal = Spacing.screen, vertical = Spacing.md),
                         verticalArrangement = Arrangement.spacedBy(Spacing.sm)
@@ -203,6 +209,7 @@ fun RepoListScreen(
                                 )
                             }
                         }
+                    }
                     }
                 }
                 else -> {}
