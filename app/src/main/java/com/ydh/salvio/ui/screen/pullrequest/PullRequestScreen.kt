@@ -1,5 +1,7 @@
 package com.ydh.salvio.ui.screen.pullrequest
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -12,6 +14,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -205,6 +208,22 @@ private fun PullRequestCard(
                         Text(text = pr.user.login, fontSize = 12.sp, color = SalvioTheme.colors.textSecondary)
                         Text(text = formatPrDate(pr, state), fontSize = 12.sp, color = SalvioTheme.colors.textSecondary)
                     }
+                }
+                val context = LocalContext.current
+                IconButton(
+                    onClick = {
+                        try {
+                            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(pr.htmlUrl)))
+                        } catch (_: Exception) {}
+                    },
+                    modifier = Modifier.size(28.dp)
+                ) {
+                    Icon(
+                        Icons.Default.OpenInNew,
+                        contentDescription = "GitHub에서 열기",
+                        tint = SalvioTheme.colors.textSecondary,
+                        modifier = Modifier.size(16.dp)
+                    )
                 }
             }
 

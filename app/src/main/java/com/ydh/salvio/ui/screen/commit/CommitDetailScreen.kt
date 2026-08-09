@@ -1,5 +1,7 @@
 package com.ydh.salvio.ui.screen.commit
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
@@ -14,6 +16,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -59,6 +62,18 @@ fun CommitDetailScreen(
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "뒤로")
+                    }
+                },
+                actions = {
+                    val context = LocalContext.current
+                    state.detail?.htmlUrl?.let { url ->
+                        IconButton(onClick = {
+                            try {
+                                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                            } catch (_: Exception) {}
+                        }) {
+                            Icon(Icons.Default.OpenInNew, contentDescription = "GitHub에서 열기")
+                        }
                     }
                 }
             )
